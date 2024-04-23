@@ -54,8 +54,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
         readedSymbols++;
     }
     printHuffmanTable(hfTable);
-    /* TODO YangJing HuffmanTree
-     * 还是有点没搞懂，需要重新写<24-04-15-17:54:18>*/
+    /* TODO YangJing HuffmanTree 还是有点没搞懂，需要重新写<24-04-15-17:54:18>*/
     huffmanTree[huffmanTableClass][huffmanTableIdentifier].builedHuffmanTree(
         hfTable);
   }
