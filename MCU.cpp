@@ -6,7 +6,7 @@ int MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
 MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
-    : _RLE(RLE), _QTables(qTables) {
+    : _RLE(RLE), _qtTables(qTables) {
   _MCUCount++;
   _order = _MCUCount;
 
@@ -17,8 +17,6 @@ MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
 }
 
 void MCU::decodeACandDC() {
-  // std::cout << "Performing Array to Matrix: " << _order << "..." <<
-  // std::endl;
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     array<int, MCU_UNIT_SIZE> zzOrder = {0};
 
@@ -39,9 +37,9 @@ void MCU::decodeACandDC() {
     //第一次将zzOrder0的值与前一个DC系数的差分值相加*/
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
-    int QIndex = imageComponent == 0 ? 0 : 1;
+    int qtIndex = imageComponent == 0 ? 0 : 1;
     for (auto i = 0; i < MCU_UNIT_SIZE; ++i)
-      zzOrder[i] *= _QTables[QIndex][i];
+      zzOrder[i] *= _qtTables[qtIndex][i];
 
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
     arrayToMatrixUseZigZag(zzOrder, _matrix[imageComponent]);

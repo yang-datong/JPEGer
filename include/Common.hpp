@@ -3,6 +3,22 @@
 
 #include "Type.hpp"
 
+#define SAFE_DELETE(p)                                                         \
+  do {                                                                         \
+    if (p) {                                                                   \
+      delete p;                                                                \
+      p = nullptr;                                                             \
+    }                                                                          \
+  } while (0)
+
+#define SAFE_DELETE_ARRAY(p)                                                   \
+  do {                                                                         \
+    if (p) {                                                                   \
+      delete[] p;                                                              \
+      p = nullptr;                                                             \
+    }                                                                          \
+  } while (0)
+
 inline const bool checkSpace(const string &value) {
   if (value.empty())
     return false;

@@ -6,6 +6,7 @@
 
 class Marker {
  public:
+  virtual ~Marker() {}
   virtual int parse(int index, uint8_t *buf, int bufSize) = 0;
 };
 

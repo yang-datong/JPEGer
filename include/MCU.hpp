@@ -4,23 +4,12 @@
 #include "Common.hpp"
 #include "Type.hpp"
 
-enum RGBComponents { RED, GREEN, BLUE };
-enum YUVComponents { Y, Cb, Cr };
-enum OutputFileType { BMP, YUV, PPM, RGB };
 // const int gOutputFileType = OutputFileType::YUV;
 const int gOutputFileType = OutputFileType::PPM;
 
-struct Pixel {
-  int16_t comp[3] = {0};
-};
-
-/* 定义一个HuffmanTable数据结构 */
-typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
-    HuffmanTable;
-
 class MCU {
  public:
-  MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables);
+  MCU(array<vector<int>, 3> RLE, vector<QuantizationTable> qTables);
 
  private:
   static int _MCUCount;
@@ -28,12 +17,8 @@ class MCU {
 
   int _order = 0;
   array<vector<int>, 3> _RLE;
-  vector<vector<uint16_t>> _QTables;
+  vector<QuantizationTable> _qtTables;
 
-  /* 3维矩阵 */
-  typedef array<array<array<int, 8>, 8>, 3> CompMatrices;
-  /* 3维逆DCT变化系数 */
-  typedef array<array<array<float, 8>, 8>, 3> IDCTCoeffs;
   CompMatrices _matrix;
   IDCTCoeffs _idctCoeffs;
 

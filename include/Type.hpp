@@ -39,4 +39,25 @@ enum JEIF {
   COM = 0xFE
 };
 
+enum RGBComponents { RED, GREEN, BLUE };
+enum YUVComponents { Y, Cb, Cr };
+enum OutputFileType { BMP, YUV, PPM, RGB };
+
+struct Pixel {
+  int16_t comp[3] = {0};
+};
+
+/* Huffman表 */
+typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
+    HuffmanTable;
+
+/* 量化表 */
+typedef vector<uint16_t> QuantizationTable;
+
+/* 3个二维矩阵(Y,U,V) */
+typedef array<array<array<int, 8>, 8>, 3> CompMatrices;
+
+/* 3个二维逆DCT系数 */
+typedef array<array<array<float, 8>, 8>, 3> IDCTCoeffs;
+
 #endif /* end of include guard: TYPE_HPP_TPOWA9WD */

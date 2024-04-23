@@ -21,7 +21,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
     /* 读取和记录符号计数 */
     int totalHuffmanCodeLen = 0;
     HuffmanTable hfTable =
-        huffmanTable[huffmanTableClass][huffmanTableIdentifier];
+        _huffmanTable[huffmanTableClass][huffmanTableIdentifier];
 
     // Huffman-code的个数固定为16个字节，比如：
     // huffmanCodeLen:[0 2 1 3 3 2 4 3 5 5 4 4 0 0 1 125 ]
@@ -55,7 +55,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
     }
     printHuffmanTable(hfTable);
     /* TODO YangJing HuffmanTree 还是有点没搞懂，需要重新写<24-04-15-17:54:18>*/
-    huffmanTree[huffmanTableClass][huffmanTableIdentifier].builedHuffmanTree(
+    _huffmanTree[huffmanTableClass][huffmanTableIdentifier].builedHuffmanTree(
         hfTable);
   }
   std::cout << "}" << std::endl;

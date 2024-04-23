@@ -46,7 +46,7 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
 }
 
 /* 这个函数不参与实际的解码(Option) */
-void mark::DQT::printQuantizationTable(vector<uint16_t> quantizationTable) {
+void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
   int arr[QUANTIZATION_TAB_SIZE] = {0};
   for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++)
     arr[i] = quantizationTable[i];

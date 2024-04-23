@@ -7,16 +7,16 @@
 namespace mark {
 class DHT : public Marker {
  private:
-  HuffmanTable huffmanTable[2][2];
+  HuffmanTable _huffmanTable[2][2];
   /* 对应四张表的HuffmanTree */
-  HuffmanTree huffmanTree[2][2];
+  HuffmanTree _huffmanTree[2][2];
 
  public:
   /* ISO/IEC 10918-1 : 1993(E) : page 40  */
   int parse(int index, uint8_t *buf, int bufSize) override;
 
   /* TODO YangJing 很新奇写法 <24-04-23 11:24:47> */
-  const HuffmanTree (*getHuffmanTree() const)[2] { return huffmanTree; }
+  const HuffmanTree (*getHuffmanTree() const)[2] { return _huffmanTree; }
 
  private:
   void printHuffmanTable(const HuffmanTable &hf);

@@ -1,5 +1,7 @@
 #include "Decoder.hpp"
+#include "Common.hpp"
 #include "HuffmanTree.hpp"
+#include "Type.hpp"
 #include <cstdint>
 
 Decoder::Decoder(string filePath) : _filePath(filePath) {
@@ -12,19 +14,15 @@ Decoder::Decoder(string filePath) : _filePath(filePath) {
 };
 
 Decoder::~Decoder() {
-  if (_buf) {
-    delete[] _buf;
-    _buf = nullptr;
-  }
   _bufSize = 0;
+  SAFE_DELETE_ARRAY(_buf);
 
-  /* TODO YangJing  <24-04-23 15:33:01> */
-  delete _app0;
-  delete _com;
-  delete _dqt;
-  delete _sof0;
-  delete _dht;
-  delete _sos;
+  SAFE_DELETE(_app0);
+  SAFE_DELETE(_com);
+  SAFE_DELETE(_dqt);
+  SAFE_DELETE(_sof0);
+  SAFE_DELETE(_dht);
+  SAFE_DELETE(_sos);
 }
 
 int Decoder::readFile() {
@@ -57,7 +55,6 @@ int Decoder::readFile() {
   delete[] fileBuffer;
   fileBuffer = nullptr;
   _file.close();
-  /* ifstream对象被销毁时，它的析构函数会自动关闭文件，如果需要及时释放可以写 */
 
   if (!_file.eof() && _file.fail())
     return -2;
@@ -118,7 +115,7 @@ int Decoder::decodeScanData() {
       static_cast<mark::SOS *>(_sos)->getImageComponentCount();
 
   /* TODO YangJing 这里写法感觉不太好 <24-04-23 11:30:26> */
-  vector<vector<uint16_t>> quantizationTables =
+  vector<QuantizationTable> quantizationTables =
       static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
 
   /* TODO 很好玩的写法 <24-04-23 11:26:24, YangJing>  */
@@ -228,21 +225,18 @@ int Decoder::decodeScanData() {
 
 inline int Decoder::erasePaddingBytes(string &scanData) {
   std::cout << "Encode data size(Befor erase):" << scanData.size() << std::endl;
-
   for (int i = 0; i < (int)scanData.size() - 8; i += 8) {
     string str8Len = scanData.substr(i, 8);
     if (str8Len == "11111111" && (i + 8) < ((int)scanData.size() - 8))
       if (scanData.substr(i + 8, 8) == "00000000")
         scanData.erase(i + 8, 8);
   }
-
   std::cout << "Encode data size(After erase):" << scanData.size() << std::endl;
   return 0;
 }
 
 int Decoder::createImage(const string ouputFileName) {
   int ret = -1;
-
   uint16_t imgWidth = static_cast<mark::SOF0 *>(_sof0)->getimgWidth();
   uint16_t imgHeight = static_cast<mark::SOF0 *>(_sof0)->getimgHeight();
   ret = _image.createImageFromMCUs(_MCU, imgWidth, imgHeight);
@@ -275,15 +269,12 @@ inline int16_t Decoder::decodeVLI(const string &value) {
     return 0;
   int sign = value[0] == '0' ? -1 : 1;
   int16_t result = 0;
-
   string tmp = value;
-
   if (sign == -1) {
     /* 按位取反 */
     for (int i = 0; i < (int)value.size(); i++)
       tmp[i] = value[i] == '0' ? '1' : '0';
   }
-
   /* 转为整型 */
   for (int i = 0; i < (int)tmp.size(); i++)
     if (tmp[i] == '1')
