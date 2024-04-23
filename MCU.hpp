@@ -61,10 +61,10 @@ class MCU {
  private:
   static int _MCUCount;
   static int _DCDiff[3];
-  array<vector<int>, 3> _RLE;
-  vector<vector<uint16_t>> _QTables;
 
   int _order = 0;
+  array<vector<int>, 3> _RLE;
+  vector<vector<uint16_t>> _QTables;
 
   void arrayToMatrixUseZigZag();
 
@@ -77,8 +77,8 @@ class MCU {
 
   void arrayToMatrixUseZigZag(const array<int, 64> a,
                               array<array<int, 8>, 8> &matrix);
-  inline void printMatrix(const array<array<int, 8>, 8> matrix);
 
+  inline void printMatrix(const array<array<int, 8>, 8> matrix);
   inline void startIDCT();
   inline void performLevelShift();
   inline void YUVToRGB();

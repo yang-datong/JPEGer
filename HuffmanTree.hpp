@@ -23,7 +23,6 @@ typedef std::shared_ptr<Node> NodePtr;
 
 class HuffmanTree {
  public:
-  /* 构建霍夫曼树 */
   int builedHuffmanTree(HuffmanTable &htable);
   const string decode(const std::string &huffCode);
 
