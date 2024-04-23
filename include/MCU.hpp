@@ -1,44 +1,8 @@
 #ifndef MCU_HPP_MJKLNXG9
 #define MCU_HPP_MJKLNXG9
 
-#include <array>
-#include <fstream>
-#include <iomanip> //用于格式化输出
-#include <iostream>
-#include <math.h>
-#include <memory>
-#include <vector>
-
-#include <bitset>
-#include <cctype>
-#include <cstdint>
-#include <cstdio>
-#include <ios>
-#include <iterator>
-#include <netinet/in.h>
-#include <sstream>
-#include <string>
-
-using namespace std;
-
-#define COMPONENT_SIZE 8
-#define MCU_UNIT_SIZE 8 * 8
-#define QUANTIZATION_TAB_SIZE 8 * 8
-/* 每个量化表的的大小为64字节 */
-#define HUFFMAN_CODE_LENGTH_POSSIBLE 16
-// Huffman code的长度定义为有16种可能
-
-enum JEIF {
-  SOI = 0xD8,
-  APP0 = 0xE0,
-  DQT = 0xDB,
-  SOF0 = 0xC0,
-  SOF2 = 0xC2,
-  DHT = 0xC4,
-  SOS = 0xDA,
-  EOI = 0xD9,
-  COM = 0xFE
-};
+#include "Common.hpp"
+#include "Type.hpp"
 
 enum RGBComponents { RED, GREEN, BLUE };
 enum YUVComponents { Y, Cb, Cr };
@@ -66,8 +30,6 @@ class MCU {
   array<vector<int>, 3> _RLE;
   vector<vector<uint16_t>> _QTables;
 
-  void arrayToMatrixUseZigZag();
-
   /* 3维矩阵 */
   typedef array<array<array<int, 8>, 8>, 3> CompMatrices;
   /* 3维逆DCT变化系数 */
@@ -75,10 +37,7 @@ class MCU {
   CompMatrices _matrix;
   IDCTCoeffs _idctCoeffs;
 
-  void arrayToMatrixUseZigZag(const array<int, 64> a,
-                              array<array<int, 8>, 8> &matrix);
-
-  inline void printMatrix(const array<array<int, 8>, 8> matrix);
+  void decodeACandDC();
   inline void startIDCT();
   inline void performLevelShift();
   inline void YUVToRGB();

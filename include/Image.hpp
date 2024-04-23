@@ -14,9 +14,7 @@ class Image {
  public:
   int createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
                           uint16_t imgHeight);
-
   int outputToYUVFile(const string &outputFileName);
-
   int outputToPPMFile(const string &outputFileName);
 };
 #endif /* end of include guard: IMAGE_HPP_J7ITHE8O */

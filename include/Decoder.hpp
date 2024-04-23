@@ -37,13 +37,11 @@ class Decoder {
   Marker *_sos;
   Image _image;
 
-  int readFile();
-
   const int HT_DC = 0;
   const int HT_AC = 1;
   const int HT_Y = 0;
   const int HT_CbCr = 1;
-  inline bool checkSpace(const string &value);
+  int readFile();
   inline int16_t decodeVLI(const string &value);
   inline int erasePaddingBytes(string &scanData);
 };

@@ -1,6 +1,7 @@
 #ifndef HUFFMANTREE_HPP_KFQOQMNU
 #define HUFFMANTREE_HPP_KFQOQMNU
 
+#include "Common.hpp"
 #include "MCU.hpp"
 
 struct Node {
@@ -27,14 +28,12 @@ class HuffmanTree {
   const string decode(const std::string &huffCode);
 
  private:
-  NodePtr m_root = nullptr;
+  NodePtr _root = nullptr;
   inline NodePtr createRootNode(const uint16_t value);
   inline NodePtr createNode() { return std::make_shared<Node>(); }
-
   void insertLeft(NodePtr node, const uint16_t value);
   void insertRight(NodePtr node, const uint16_t value);
   NodePtr getRightLevelNode(NodePtr node);
-
   void printHuufmanTree(NodePtr node, string str);
 };
 

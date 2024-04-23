@@ -1,4 +1,5 @@
 #include "MCU.hpp"
+#include "Common.hpp"
 #include <cstdint>
 
 int MCU::_DCDiff[3] = {0, 0, 0};
@@ -9,13 +10,13 @@ MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
   _MCUCount++;
   _order = _MCUCount;
 
-  arrayToMatrixUseZigZag();
+  decodeACandDC();
   startIDCT();
   if (gOutputFileType != OutputFileType::YUV)
     YUVToRGB();
 }
 
-void MCU::arrayToMatrixUseZigZag() {
+void MCU::decodeACandDC() {
   // std::cout << "Performing Array to Matrix: " << _order << "..." <<
   // std::endl;
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
@@ -44,49 +45,7 @@ void MCU::arrayToMatrixUseZigZag() {
 
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
     arrayToMatrixUseZigZag(zzOrder, _matrix[imageComponent]);
-  }
-}
-
-void MCU::arrayToMatrixUseZigZag(
-    const array<int, MCU_UNIT_SIZE> a,
-    array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix) {
-  int row = 0, col = 0;
-  for (int i = 0; i < MCU_UNIT_SIZE; ++i) {
-    matrix[row][col] = a[i];
-    // 奇数斜线往上
-    if ((row + col) % 2 == 0) {
-      if (col == COMPONENT_SIZE - 1)
-        row++;
-      else if (row == 0)
-        col++;
-      else {
-        row--;
-        col++;
-      }
-    }
-    // 偶数斜线往下
-    else {
-      if (row == COMPONENT_SIZE - 1)
-        col++;
-      else if (col == 0)
-        row++;
-      else {
-        col--;
-        row++;
-      }
-    }
-  }
-  // printMatrix(matrix);
-}
-
-inline void MCU::printMatrix(
-    const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> matrix) {
-  int rows = COMPONENT_SIZE, cols = COMPONENT_SIZE;
-  for (int i = 0; i < rows; ++i) {
-    std::cout << "|";
-    for (int j = 0; j < cols; ++j)
-      std::cout << setw(4) << matrix[i][j];
-    std::cout << "|" << std::endl;
+    // printMatrix(_matrix[imageComponent]);
   }
 }
 

@@ -1,17 +1,6 @@
 #include "HuffmanTree.hpp"
 #include "MCU.hpp"
 
-inline const bool isWhiteSpace(const char ch) {
-  return iscntrl(ch) || isblank(ch) || isspace(ch);
-}
-
-inline const bool isStringWhiteSpace(const std::string &str) {
-  for (auto &&c : str)
-    if (!isWhiteSpace(c))
-      return false;
-  return true;
-}
-
 inline NodePtr HuffmanTree::createRootNode(const uint16_t value) {
   NodePtr root = std::make_shared<Node>("", value);
   root->root = true;
@@ -89,10 +78,10 @@ void HuffmanTree::printHuufmanTree(NodePtr node, string str) {
 }
 
 int HuffmanTree::builedHuffmanTree(HuffmanTable &htable) {
-  m_root = createRootNode(0);
-  insertLeft(m_root, 0);
-  insertRight(m_root, 0);
-  NodePtr leftMost = m_root->lChild;
+  _root = createRootNode(0);
+  insertLeft(_root, 0);
+  insertRight(_root, 0);
+  NodePtr leftMost = _root->lChild;
 
   for (int i = 0; i < HUFFMAN_CODE_LENGTH_POSSIBLE; ++i) {
     // 如果计数为零，则为所有未分配的叶节点添加左和右子节点。
@@ -126,12 +115,11 @@ int HuffmanTree::builedHuffmanTree(HuffmanTable &htable) {
 }
 
 const string HuffmanTree::decode(const string &huffCode) {
-  if (isStringWhiteSpace(huffCode))
+  if (!checkSpace(huffCode))
     return "";
 
   int i = 0;
-  NodePtr nptr = m_root;
-
+  NodePtr nptr = _root;
   do {
     if (huffCode[i] == '0')
       nptr = nptr->lChild;

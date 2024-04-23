@@ -6,7 +6,6 @@
 
 namespace mark {
 class SOS : public Marker {
-
  private:
   /* 帧中图像分量的数量 */
   string _scanData;

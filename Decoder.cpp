@@ -17,6 +17,14 @@ Decoder::~Decoder() {
     _buf = nullptr;
   }
   _bufSize = 0;
+
+  /* TODO YangJing  <24-04-23 15:33:01> */
+  delete _app0;
+  delete _com;
+  delete _dqt;
+  delete _sof0;
+  delete _dht;
+  delete _sos;
 }
 
 int Decoder::readFile() {
@@ -282,14 +290,4 @@ inline int16_t Decoder::decodeVLI(const string &value) {
       result |= 1 << (tmp.size() - i - 1);
 
   return result * sign;
-}
-
-inline bool Decoder::checkSpace(const string &value) {
-  if (value.empty())
-    return false;
-  for (const auto &it : value) {
-    if (iscntrl(it) || isblank(it) || isspace(it))
-      return false;
-  }
-  return true;
 }
