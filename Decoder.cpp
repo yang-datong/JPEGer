@@ -1,10 +1,11 @@
 #include "Decoder.hpp"
 #include "Common.hpp"
 #include "HuffmanTree.hpp"
+#include "Image.hpp"
 #include "Type.hpp"
 #include <cstdint>
 
-Decoder::Decoder(string filePath) : _filePath(filePath) {
+Decoder::Decoder(string &filePath) : _filePath(filePath) {
   _app0 = new mark::APP0();
   _com = new mark::COM();
   _dqt = new mark::DQT();
@@ -12,6 +13,11 @@ Decoder::Decoder(string filePath) : _filePath(filePath) {
   _dht = new mark::DHT();
   _sos = new mark::SOS();
 };
+
+Decoder::Decoder(string &filePath, const int outputTypeFile)
+    : Decoder(filePath) {
+  Image::sOutputFileType = outputTypeFile;
+}
 
 Decoder::~Decoder() {
   _bufSize = 0;
@@ -113,22 +119,10 @@ int Decoder::decodeScanData() {
   string scanData = static_cast<mark::SOS *>(_sos)->getScanData();
   uint8_t imageComponentCount =
       static_cast<mark::SOS *>(_sos)->getImageComponentCount();
-
-  /* TODO YangJing 这里写法感觉不太好 <24-04-23 11:30:26> */
   vector<QuantizationTable> quantizationTables =
       static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
-
-  /* TODO 很好玩的写法 <24-04-23 11:26:24, YangJing>  */
-  const HuffmanTree(*readOnlyHuffmanTree)[2] =
+  mark::HuffmanTrees huffmanTree =
       static_cast<mark::DHT *>(_dht)->getHuffmanTree();
-
-  /* TODO YangJing 这里写法感觉不太好 <24-04-23 11:30:26> */
-  HuffmanTree huffmanTree[2][2];
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 2; j++) {
-      huffmanTree[i][j] = readOnlyHuffmanTree[i][j];
-    }
-  }
 
   /* 移除在JPEG图像的压缩码流中由于编码规则添加进去的填充字节 */
   erasePaddingBytes(scanData);
@@ -241,8 +235,7 @@ int Decoder::createImage(const string ouputFileName) {
   uint16_t imgHeight = static_cast<mark::SOF0 *>(_sof0)->getimgHeight();
   ret = _image.createImageFromMCUs(_MCU, imgWidth, imgHeight);
 
-  /* TODO YangJing 这里感觉移动到Image中好些 <24-04-23 12:59:52> */
-  switch (gOutputFileType) {
+  switch (Image::sOutputFileType) {
   case OutputFileType::YUV:
     ret = _image.outputToYUVFile(ouputFileName);
     break;

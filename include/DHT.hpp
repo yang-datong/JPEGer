@@ -5,18 +5,18 @@
 #include "Marker.hpp"
 
 namespace mark {
+typedef array<array<HuffmanTree, 2>, 2> HuffmanTrees;
 class DHT : public Marker {
  private:
   HuffmanTable _huffmanTable[2][2];
   /* 对应四张表的HuffmanTree */
-  HuffmanTree _huffmanTree[2][2];
+  HuffmanTrees _huffmanTree;
 
  public:
   /* ISO/IEC 10918-1 : 1993(E) : page 40  */
   int parse(int index, uint8_t *buf, int bufSize) override;
 
-  /* TODO YangJing 很新奇写法 <24-04-23 11:24:47> */
-  const HuffmanTree (*getHuffmanTree() const)[2] { return _huffmanTree; }
+  const HuffmanTrees &getHuffmanTree() { return _huffmanTree; }
 
  private:
   void printHuffmanTable(const HuffmanTable &hf);

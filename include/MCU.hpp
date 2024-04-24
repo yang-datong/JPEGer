@@ -4,9 +4,6 @@
 #include "Common.hpp"
 #include "Type.hpp"
 
-// const int gOutputFileType = OutputFileType::YUV;
-const int gOutputFileType = OutputFileType::PPM;
-
 class MCU {
  public:
   MCU(array<vector<int>, 3> RLE, vector<QuantizationTable> qTables);

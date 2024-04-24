@@ -15,7 +15,8 @@
 
 class Decoder {
  public:
-  Decoder(string filePath);
+  Decoder(string &filePath);
+  Decoder(string &filePath, const int outputTypeFile);
   ~Decoder();
   int startDecode();
   int startFindMarker();

@@ -1,10 +1,11 @@
 #include "Decoder.hpp"
+#include "Type.hpp"
 
 int main() {
   string inputFileName = "./lenna.jpg";
   string ouputFileName = "./demo";
 
-  Decoder decoder(inputFileName);
+  Decoder decoder(inputFileName, OutputFileType::YUV);
   int ret = -1;
   std::cout << "-------------------------------------------- startFindMarker "
                "--------------------------------------------"

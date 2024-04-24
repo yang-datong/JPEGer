@@ -12,6 +12,7 @@ class Image {
   PixelPtr _pixelPtr = nullptr;
 
  public:
+  static int sOutputFileType;
   int createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
                           uint16_t imgHeight);
   int outputToYUVFile(const string &outputFileName);
