@@ -17,6 +17,7 @@ class DQT : public Marker {
 
   /* ISO/IEC 10918-1 : 1993(E) : page 39 */
   int parse(int index, uint8_t *buf, int bufSize) override;
+  int package(uint8_t *&buf, int &bufSize) override;
 
  private:
   /* 这个函数不参与实际的解码(Option) */

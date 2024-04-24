@@ -5,7 +5,7 @@
 #include "Type.hpp"
 #include <cstdint>
 
-Decoder::Decoder(string &filePath) : _filePath(filePath) {
+Decoder::Decoder(const string &filePath) : _filePath(filePath) {
   _app0 = new mark::APP0();
   _com = new mark::COM();
   _dqt = new mark::DQT();
@@ -14,7 +14,7 @@ Decoder::Decoder(string &filePath) : _filePath(filePath) {
   _sos = new mark::SOS();
 };
 
-Decoder::Decoder(string &filePath, const int outputTypeFile)
+Decoder::Decoder(const string &filePath, const int outputTypeFile)
     : Decoder(filePath) {
   Image::sOutputFileType = outputTypeFile;
 }
@@ -75,34 +75,34 @@ int Decoder::startFindMarker() {
   for (int i = 0; i < _bufSize - 1; i++) {
     if (_buf[i] == 0xff) {
       switch (_buf[i + 1]) {
-      case SOI:
+      case JFIF::SOI:
         std::cout << "Start OF Image" << std::endl;
         break;
-      case APP0:
+      case JFIF::APP0:
         std::cout << "Decode Application-specific" << std::endl;
         _app0->parse(i + 2, _buf, _bufSize);
         break;
-      case COM:
+      case JFIF::COM:
         std::cout << "Comment" << std::endl;
         _com->parse(i + 2, _buf, _bufSize);
         break;
-      case DQT:
+      case JFIF::DQT:
         std::cout << "Define Quantization Table(s)" << std::endl;
         _dqt->parse(i + 2, _buf, _bufSize);
         break;
-      case SOF0:
+      case JFIF::SOF0:
         std::cout << "Start Of Frame 0" << std::endl;
         _sof0->parse(i + 2, _buf, _bufSize);
         break;
-      case DHT:
+      case JFIF::DHT:
         std::cout << "Define Huffman Table(s)" << std::endl;
         _dht->parse(i + 2, _buf, _bufSize);
         break;
-      case SOS:
+      case JFIF::SOS:
         std::cout << "Start of Scan" << std::endl;
         _sos->parse(i + 2, _buf, _bufSize);
         break;
-      case EOI:
+      case JFIF::EOI:
         std::cout << "End OF Image" << std::endl;
         if (i + 2 != _bufSize)
           return -1;

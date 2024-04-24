@@ -27,7 +27,7 @@ using namespace std;
 #define HUFFMAN_CODE_LENGTH_POSSIBLE 16
 // Huffman code的长度定义为有16种可能
 
-enum JEIF {
+enum JFIF {
   SOI = 0xD8,
   APP0 = 0xE0,
   DQT = 0xDB,

@@ -2,6 +2,7 @@
 #include "Type.hpp"
 
 int Image::sOutputFileType = FileFormat::PPM;
+int Image::sInputFileType = FileFormat::YUV;
 
 int Image::createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
                                uint16_t imgHeight) {
@@ -55,7 +56,7 @@ int Image::createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
 int Image::outputToYUVFile(const string &outputFileName) {
   if (this->_imgWidth <= 0 || this->_imgHeight <= 0)
     return -1;
-  std::ofstream outputFile(outputFileName + ".yuv", std::ios::out);
+  ofstream outputFile(outputFileName + ".yuv", std::ios::out);
   if (!outputFile.is_open() || !outputFile.good()) {
     cout << "Unable to create dump file \'" + outputFileName + "\'."
          << std::endl;

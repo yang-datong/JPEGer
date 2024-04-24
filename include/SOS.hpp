@@ -16,6 +16,7 @@ class SOS : public Marker {
   uint8_t getImageComponentCount() { return _imageComponentCount; }
   /* ISO/IEC 10918-1 : 1993(E) : page 37 */
   int parse(int index, uint8_t *buf, int bufSize) override;
+  int package(uint8_t *&buf, int &bufSize) override;
 
  private:
   /* 读取编码图像数据 */

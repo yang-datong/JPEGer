@@ -46,3 +46,5 @@ int mark::SOF0::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "}" << std::endl;
   return 0;
 }
+
+int mark::SOF0::package(uint8_t *&buf, int &bufSize) { return 0; };

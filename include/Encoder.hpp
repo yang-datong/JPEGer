@@ -1,5 +1,5 @@
-#ifndef DECODER_HPP_4KCLDUFQ
-#define DECODER_HPP_4KCLDUFQ
+#ifndef ENCODER_HPP_UW8N0IPM
+#define ENCODER_HPP_UW8N0IPM
 
 #include "APP0.hpp"
 #include "COM.hpp"
@@ -13,18 +13,20 @@
 #include "HuffmanTree.hpp"
 #include "MCU.hpp"
 
-class Decoder {
+class Encoder {
  public:
-  Decoder(const string &filePath);
-  Decoder(const string &filePath, const int outputTypeFile);
-  ~Decoder();
-  int startDecode();
-  int startFindMarker();
-  int decodeScanData();
+  Encoder(const string &inputFilePath, const string &outputFilePath);
+  Encoder(const string &inputFilePath, const string &outputFilePath,
+          const int inputTypeFile);
+  ~Encoder();
+  int startMakeMarker();
+  int startEncode();
+  int encodeScanData();
   int createImage(const string ouputFileName);
 
  private:
-  string _filePath;
+  string _inputFilePath;
+  string _outputFilePath;
   ifstream _file;
   uint8_t *_buf = nullptr;
   int _bufSize = 0;
@@ -43,8 +45,8 @@ class Decoder {
   const int HT_Y = 0;
   const int HT_CbCr = 1;
   int readFile();
-  inline int16_t decodeVLI(const string &value);
-  inline int erasePaddingBytes(string &scanData);
+  inline int16_t encodeVLI(const string &value);
+  inline int fillPaddingBytes(string &scanData);
 };
 
-#endif /* end of include guard: DECODER_HPP_4KCLDUFQ */
+#endif /* end of include guard: ENCODER_HPP_UW8N0IPM */

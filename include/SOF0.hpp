@@ -14,6 +14,7 @@ class SOF0 : public Marker {
   uint16_t getimgWidth() { return _imgWidth; }
   uint16_t getimgHeight() { return _imgHeight; }
   int parse(int index, uint8_t *buf, int bufSize) override;
+  int package(uint8_t *&buf, int &bufSize) override;
 };
 } // namespace mark
 #endif /* end of include guard: SOF0_HPP_WEPMVZS4 */

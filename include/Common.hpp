@@ -50,4 +50,7 @@ void arrayToMatrixUseZigZag(
     const array<int, MCU_UNIT_SIZE> a,
     array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix);
 
+inline string getFileType(string &fileName) {
+  return fileName.substr(fileName.find_last_of('.') + 1);
+}
 #endif /* end of include guard: COMMON_HPP_S7ZCNIWC */

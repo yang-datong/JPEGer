@@ -11,3 +11,5 @@ int mark::COM::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "}" << std::endl;
   return 0;
 }
+
+int mark::COM::package(uint8_t *&buf, int &bufSize) { return 0; };

@@ -7,6 +7,7 @@ namespace mark {
 class COM : public Marker {
  public:
   int parse(int index, uint8_t *buf, int bufSize) override;
+  int package(uint8_t *&buf, int &bufSize) override;
 };
 } // namespace mark
 

@@ -13,6 +13,7 @@ class Image {
 
  public:
   static int sOutputFileType;
+  static int sInputFileType;
   int createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
                           uint16_t imgHeight);
   int outputToYUVFile(const string &outputFileName);
