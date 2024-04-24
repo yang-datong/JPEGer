@@ -41,7 +41,7 @@ enum JEIF {
 
 enum RGBComponents { RED, GREEN, BLUE };
 enum YUVComponents { Y, Cb, Cr };
-enum OutputFileType { BMP, YUV, PPM, RGB };
+enum FileFormat { BMP, YUV, PPM, RGB };
 
 struct Pixel {
   int16_t comp[3] = {0};

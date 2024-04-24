@@ -236,10 +236,10 @@ int Decoder::createImage(const string ouputFileName) {
   ret = _image.createImageFromMCUs(_MCU, imgWidth, imgHeight);
 
   switch (Image::sOutputFileType) {
-  case OutputFileType::YUV:
+  case FileFormat::YUV:
     ret = _image.outputToYUVFile(ouputFileName);
     break;
-  case OutputFileType::PPM:
+  case FileFormat::PPM:
     ret = _image.outputToPPMFile(ouputFileName);
     break;
   default:

@@ -2,11 +2,12 @@
 #include "Decoder.hpp"
 #include "Type.hpp"
 
+// Decoder
 int main() {
   string inputFileName = "./lenna.jpg";
-  string ouputFileName = "./demo";
+  string outputFileName = "./demo";
 
-  Decoder decoder(inputFileName, OutputFileType::YUV);
+  Decoder decoder(inputFileName, FileFormat::YUV);
   int ret = -1;
   std::cout << "-------------------------------------------- startFindMarker "
                "--------------------------------------------"
@@ -23,7 +24,7 @@ int main() {
   std::cout << "---------------------------------------------- createImage "
                "----------------------------------------------"
             << std::endl;
-  ret = decoder.createImage(ouputFileName);
+  ret = decoder.createImage(outputFileName);
   RET(ret, "Failed for createImage()")
   return 0;
 }

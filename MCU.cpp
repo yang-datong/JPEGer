@@ -1,6 +1,7 @@
 #include "MCU.hpp"
 #include "Common.hpp"
 #include "Image.hpp"
+#include "Type.hpp"
 #include <cstdint>
 
 int MCU::_DCDiff[3] = {0, 0, 0};
@@ -13,7 +14,7 @@ MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
 
   decodeACandDC();
   startIDCT();
-  if (Image::sOutputFileType != OutputFileType::YUV)
+  if (Image::sOutputFileType != FileFormat::YUV)
     YUVToRGB();
 }
 

@@ -1,6 +1,7 @@
 #include "Image.hpp"
+#include "Type.hpp"
 
-int Image::sOutputFileType = OutputFileType::PPM;
+int Image::sOutputFileType = FileFormat::PPM;
 
 int Image::createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
                                uint16_t imgHeight) {
