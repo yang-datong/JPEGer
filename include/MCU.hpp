@@ -14,7 +14,7 @@ class MCU {
 
   int _order = 0;
   array<vector<int>, 3> _RLE;
-  vector<QuantizationTable> _qtTables;
+  const vector<QuantizationTable> _qtTables;
 
   CompMatrices _matrix;
   IDCTCoeffs _idctCoeffs;

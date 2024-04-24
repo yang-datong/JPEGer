@@ -19,6 +19,12 @@
     }                                                                          \
   } while (0)
 
+#define RET(ret, str)                                                          \
+  if (ret) {                                                                   \
+    std::cerr << "\033[31m" << str << "\033[0m" << std::endl;                  \
+    return -1;                                                                 \
+  }
+
 inline const bool checkSpace(const string &value) {
   if (value.empty())
     return false;

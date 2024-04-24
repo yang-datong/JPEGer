@@ -1,3 +1,4 @@
+#include "Common.hpp"
 #include "Decoder.hpp"
 #include "Type.hpp"
 
@@ -11,27 +12,18 @@ int main() {
                "--------------------------------------------"
             << std::endl;
   ret = decoder.startFindMarker();
-  if (ret) {
-    std::cerr << "\033[31mFailed for startFindMarker()\033[0m" << std::endl;
-    return -1;
-  }
+  RET(ret, "Failed for startFindMarker()")
 
   std::cout << "-------------------------------------------- decodeScanData "
                "--------------------------------------------"
             << std::endl;
   ret = decoder.decodeScanData();
-  if (ret) {
-    std::cerr << "\033[31mFailed for decodeScanData()\033[0m" << std::endl;
-    return -1;
-  }
+  RET(ret, "Failed for decodeScanData()")
 
   std::cout << "---------------------------------------------- createImage "
                "----------------------------------------------"
             << std::endl;
   ret = decoder.createImage(ouputFileName);
-  if (ret) {
-    std::cerr << "\033[31mFailed for createImage()\033[0m" << std::endl;
-    return -1;
-  }
+  RET(ret, "Failed for createImage()")
   return 0;
 }
