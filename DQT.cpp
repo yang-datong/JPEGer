@@ -4,10 +4,11 @@
 int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
   header.len = bs.readBytes<uint16_t>(2);
-  std::cout << "DQT[" << index << "~" << index + len << "] --> {" << std::endl;
+  std::cout << "DQT[" << index << "~" << index + header.len << "] --> {"
+            << std::endl;
 
   /* 1. 应对多个量化表的情况(总长度需要+ 1个字节的PqTq） */
-  for (int i = 0; i < len / (QUANTIZATION_TAB_SIZE + 1); i++) {
+  for (int i = 0; i < header.len / (QUANTIZATION_TAB_SIZE + 1); i++) {
     /* 2. 首字节的高4位表示精度，而低4位表示量化表的编号*/
     header.PqTq = bs.readByte();
     /* - 量化表元素精度：值0表示8位Qk值；值1表示16位Qk值*/
@@ -33,10 +34,10 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
       if (precision == 0) {
         header.element[k] = bs.readByte();
         _quantizationTables[identifier].push_back(header.element[k]);
-        /* TODO YangJing 可能会有问题，这里的字节大小为uint8_t <24-04-27
-         * 16:39:05> */
       } else if (precision == 1) {
-        header.element[k] = (uint16_t)bs.readByte();
+        /* TODO*YangJing可能会有问题，这里的字节大小为uint16_t（需要分情况处理，暂时先不做吧，都按1字节处理，其实2字节的情况很少）<24-04-27-16:39:05>*/
+        // header.element[k] = (uint16_t)bs.readByte();
+        header.element[k] = bs.readByte();
         _quantizationTables[identifier].push_back(header.element[k]);
       }
     }
@@ -60,7 +61,44 @@ void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
   printMatrix(matrix);
 }
 
+#define QUANTIZATION_FLOAT 100
 int mark::DQT::package(ofstream &outputFile) {
+  int ret = -1;
+  ret |= buildLumaDQTable(outputFile);
+  ret |= buildChromaDQTable(outputFile);
+  if (ret)
+    return -1;
+  return 0;
+};
+
+int mark::DQT::buildLumaDQTable(ofstream &outputFile) {
+  header.len = htons(sizeof(header) - 2);
+
+  uint8_t precision = 0; // 8 bit
+  // uint8_t precision = 1; //16 bit
+  uint8_t identifier = 0;
+
+  header.PqTq = precision;
+  header.PqTq <<= 4;
+  header.PqTq |= identifier;
+
+  float alpha = 2.0f - QUANTIZATION_FLOAT / 50.0f;
+  for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++) {
+    float tmp = _lumaTable[i] * alpha;
+    if (tmp < 1)
+      tmp = 1;
+    else if (tmp > 255)
+      tmp = 255;
+    header.element[i] = tmp;
+  }
+
+  uint8_t tmp[sizeof(header)] = {0};
+  memcpy(tmp, &header, sizeof(header));
+  outputFile.write((const char *)tmp, sizeof(header));
+  return 0;
+}
+
+int mark::DQT::buildChromaDQTable(ofstream &outputFile) {
   header.len = htons(sizeof(header) - 2);
 
   uint8_t precision = 0; // 8 bit
@@ -71,13 +109,18 @@ int mark::DQT::package(ofstream &outputFile) {
   header.PqTq <<= 4;
   header.PqTq |= identifier;
 
+  float alpha = 2.0f - QUANTIZATION_FLOAT / 50.0f;
   for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++) {
-    header.element[i] = i;
+    float tmp = _chromaTable[i] * alpha;
+    if (tmp < 1)
+      tmp = 1;
+    else if (tmp > 255)
+      tmp = 255;
+    header.element[i] = tmp;
   }
-  uint8_t *tmp = new uint8_t[sizeof(header)];
+
+  uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));
   outputFile.write((const char *)tmp, sizeof(header));
-  delete[] tmp;
-  tmp = nullptr;
   return 0;
-};
+}

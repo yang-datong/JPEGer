@@ -5,16 +5,30 @@
 #include <cstdint>
 
 namespace mark {
-class SOF0 : public Marker {
- private:
-  uint16_t _imgHeight = 0;
-  uint16_t _imgWidth = 0;
+typedef struct __attribute__((packed)) _ImageComponent {
+  uint8_t componentIdentifier;
+  uint8_t sampFactor;
+  uint8_t destinationSelector;
+} ImageComponent;
 
+typedef struct __attribute__((packed)) _SOF0 {
+  uint8_t SOF0[2] = {0xff, JFIF::SOF0};
+  uint16_t len = 0;
+  uint8_t precision = 0;
+  uint16_t imgWidth = 0;
+  uint16_t imgHeight = 0;
+  uint8_t imageComponentCount = 0;
+} SOF0Header;
+
+class SOF0 : public Marker {
  public:
-  uint16_t getimgWidth() { return _imgWidth; }
-  uint16_t getimgHeight() { return _imgHeight; }
+  SOF0Header header;
+  ImageComponent *imageComponent = nullptr;
+  uint16_t getimgWidth() { return header.imgWidth; }
+  uint16_t getimgHeight() { return header.imgHeight; }
   int parse(int index, uint8_t *buf, int bufSize) override;
   int package(ofstream &outputFile) override;
 };
 } // namespace mark
+
 #endif /* end of include guard: SOF0_HPP_WEPMVZS4 */

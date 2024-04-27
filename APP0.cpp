@@ -6,8 +6,9 @@
 
 int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
-  len = bs.readBytes<uint16_t>(2);
-  std::cout << "APP0[" << index << "~" << len + index << "] --> {" << std::endl;
+  header.len = bs.readBytes<uint16_t>(2);
+  std::cout << "APP0[" << index << "~" << header.len + index << "] --> {"
+            << std::endl;
   for (int i = 0; i < (int)sizeof(header.identifier); i++)
     header.identifier[i] = bs.readByte();
 
@@ -40,7 +41,7 @@ int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   header.Ythumbnail = bs.readByte();
   std::cout << "\tYthumbnail:" << (int)header.Ythumbnail << std::endl;
 
-  int remain = len - bs.getActualReadSize();
+  int remain = header.len - bs.getActualReadSize();
   uint8_t thumbnailImage[remain];
   std::cout << "\tremain:" << remain << std::endl;
   if (remain > 0) {
@@ -72,10 +73,8 @@ int mark::APP0::package(ofstream &outputFile) {
   header.Xthumbnail = 0;
   header.Ythumbnail = 0;
 
-  uint8_t *tmp = new uint8_t[sizeof(header)];
+  uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));
   outputFile.write((const char *)tmp, sizeof(header));
-  delete[] tmp;
-  tmp = nullptr;
   return 0;
 }

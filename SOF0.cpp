@@ -1,39 +1,44 @@
 #include "SOF0.hpp"
+#include <cstdint>
 
 int mark::SOF0::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
-  const int begIndex = index;
-  uint16_t len = bs.readBytes<uint16_t>(2);
-  const int endIndex = len + begIndex;
-  std::cout << "SOF0[" << begIndex << "~" << endIndex << "] --> {" << std::endl;
-  uint8_t precision = bs.readByte();
+  header.len = bs.readBytes<uint16_t>(2);
+  std::cout << "SOF0[" << index << "~" << header.len + index << "] --> {"
+            << std::endl;
+  header.precision = bs.readByte();
   std::cout << "\tType:Baseline DCT" << std::endl;
-  std::cout << "\tprecision:" << (int)precision << " bit" << std::endl;
+  std::cout << "\tprecision:" << (int)header.precision << " bit" << std::endl;
 
-  _imgHeight = bs.readBytes<uint16_t>(2);
-  _imgWidth = bs.readBytes<uint16_t>(2);
-  std::cout << "\timgWidth:" << (int)_imgWidth
-            << ",imgHeight:" << (int)_imgHeight << std::endl;
+  header.imgHeight = bs.readBytes<uint16_t>(2);
+  header.imgWidth = bs.readBytes<uint16_t>(2);
+  std::cout << "\timgWidth:" << (int)header.imgWidth
+            << ",imgHeight:" << (int)header.imgHeight << std::endl;
 
   /* 帧中图像分量的数量 */
-  uint8_t imageComponentCount = bs.readByte();
-  std::cout << "\timageComponentCount:" << (int)imageComponentCount
+  header.imageComponentCount = bs.readByte();
+  std::cout << "\timageComponentCount:" << (int)header.imageComponentCount
             << std::endl;
 
   bool isNonSampled = true;
   std::cout << "\timageComponent{" << std::endl;
-  for (int i = 0; i < imageComponentCount; i++) {
-    uint8_t componentIdentifier = bs.readByte();
-    uint8_t sampFactor = bs.readByte();
-    uint8_t sampFactorH = sampFactor >> 4;
-    uint8_t sampFactorV = sampFactor & 0b1111;
-    uint8_t destinationSelector = bs.readByte();
-    std::cout << "\t\tcomponentIdentifier:" << (int)componentIdentifier;
+
+  ImageComponent *imageComponent =
+      new ImageComponent[header.imageComponentCount];
+  for (int i = 0; i < header.imageComponentCount; i++) {
+    imageComponent[i].componentIdentifier = bs.readByte();
+    imageComponent[i].sampFactor = bs.readByte();
+    uint8_t sampFactorH = imageComponent[i].sampFactor >> 4;
+    uint8_t sampFactorV = imageComponent[i].sampFactor & 0b1111;
+    imageComponent[i].destinationSelector = bs.readByte();
+    std::cout << "\t\tcomponentIdentifier:"
+              << (int)imageComponent[i].componentIdentifier;
     std::cout << ",Horizontal sampFactor:" << (int)sampFactorH
               << ",Vertical sampFactor:" << (int)sampFactorV;
-    std::cout << ",destinationSelector:" << (int)destinationSelector
-              << std::endl;
-    if ((sampFactor >> 4) != 1 || (sampFactor & 0xf) != 1)
+    std::cout << ",destinationSelector:"
+              << (int)imageComponent[i].destinationSelector << std::endl;
+    if ((imageComponent[i].sampFactor >> 4) != 1 ||
+        (imageComponent[i].sampFactor & 0xf) != 1)
       isNonSampled = false;
   }
   std::cout << "\t}" << std::endl;
@@ -47,4 +52,32 @@ int mark::SOF0::parse(int index, uint8_t *buf, int bufSize) {
   return 0;
 }
 
-int mark::SOF0::package(ofstream &outputFile) { return 0; };
+int mark::SOF0::package(ofstream &outputFile) {
+  const uint8_t comCount = 3;
+
+  header.len = sizeof(header) - 2;
+  header.precision = 8;
+  header.imgWidth = htons(512);
+  header.imgHeight = htons(512);
+  header.imageComponentCount = comCount;
+  if (comCount > 0)
+    header.len = htons(header.len + comCount * sizeof(ImageComponent));
+
+  uint8_t tmp[sizeof(header)] = {0};
+  memcpy(tmp, &header, sizeof(header));
+  outputFile.write((const char *)tmp, sizeof(header));
+
+  ImageComponent imageComponent[comCount];
+
+  for (int i = 0; i < comCount; i++) {
+    imageComponent[i].componentIdentifier = i + 1;
+    imageComponent[i].sampFactor = 0b0001'0001;
+    imageComponent[i].destinationSelector = 1;
+  }
+
+  uint8_t tmp2[comCount * sizeof(ImageComponent)] = {0};
+  memcpy(tmp2, imageComponent, comCount * sizeof(ImageComponent));
+  outputFile.write((const char *)tmp2, comCount * sizeof(ImageComponent));
+
+  return 0;
+};

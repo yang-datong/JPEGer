@@ -7,7 +7,6 @@
 
 class Marker {
  public:
-  uint16_t len = 0;
   virtual ~Marker() {}
   virtual int parse(int index, uint8_t *buf, int bufSize) = 0;
 

@@ -5,7 +5,6 @@
 #include <cstdint>
 
 namespace mark {
-
 typedef struct __attribute__((packed)) _APP0 {
   uint8_t APP0[2] = {0xff, JFIF::APP0};
   uint16_t len = 0;

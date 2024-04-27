@@ -4,7 +4,6 @@
 #include "Marker.hpp"
 
 namespace mark {
-
 typedef struct __attribute__((packed)) _COM {
   uint8_t COM[2] = {0xff, JFIF::COM};
   uint16_t len = 0;
