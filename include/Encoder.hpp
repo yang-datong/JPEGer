@@ -25,9 +25,10 @@ class Encoder {
   int createImage(const string ouputFileName);
 
  private:
+  ifstream _file;
   string _inputFilePath;
   string _outputFilePath;
-  ifstream _file;
+
   uint8_t *_buf = nullptr;
   int _bufSize = 0;
   vector<MCU> _MCU;
