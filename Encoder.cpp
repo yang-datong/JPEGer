@@ -40,6 +40,7 @@ int Encoder::startMakeMarker() {
 
   _app0->package(outputFile);
   _com->package(outputFile);
+  _dqt->package(outputFile);
 
   return 0;
 }

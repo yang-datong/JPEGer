@@ -3,22 +3,22 @@
 
 int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
-  uint16_t len = bs.readBytes<uint16_t>(2);
+  header.len = bs.readBytes<uint16_t>(2);
   std::cout << "DQT[" << index << "~" << index + len << "] --> {" << std::endl;
 
   /* 1. 应对多个量化表的情况(总长度需要+ 1个字节的PqTq） */
   for (int i = 0; i < len / (QUANTIZATION_TAB_SIZE + 1); i++) {
     /* 2. 首字节的高4位表示精度，而低4位表示量化表的编号*/
-    uint8_t PqTq = bs.readByte();
+    header.PqTq = bs.readByte();
     /* - 量化表元素精度：值0表示8位Qk值；值1表示16位Qk值*/
-    uint8_t precision = PqTq >> 4;
+    uint8_t precision = header.PqTq >> 4;
     if (precision == 0)
       std::cout << "\tprecision: 8 bit" << std::endl;
     else if (precision == 1)
       std::cout << "\tprecision: 16 bit" << std::endl;
 
     /* - 量化表目标标识符：指定解码器上应安装量化表的四个可能目标之一*/
-    uint8_t identifier = PqTq & 0b1111;
+    uint8_t identifier = header.PqTq & 0b1111;
     std::cout << "\tidentifier:" << (int)identifier << std::endl;
     /* 这里的QTtableNumber是按照实际的量化表个数来的，比如：
      * - 一个JPEG文件中有2个量化表那么编号会依次为0,1
@@ -31,11 +31,13 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
     for (int k = 0; k < QUANTIZATION_TAB_SIZE; k++) {
       /* element的大小可能是8、16*/
       if (precision == 0) {
-        uint8_t element = bs.readByte();
-        _quantizationTables[identifier].push_back(element);
+        header.element[k] = bs.readByte();
+        _quantizationTables[identifier].push_back(header.element[k]);
+        /* TODO YangJing 可能会有问题，这里的字节大小为uint8_t <24-04-27
+         * 16:39:05> */
       } else if (precision == 1) {
-        uint16_t element = (uint16_t)bs.readByte();
-        _quantizationTables[identifier].push_back(element);
+        header.element[k] = (uint16_t)bs.readByte();
+        _quantizationTables[identifier].push_back(header.element[k]);
       }
     }
     printQuantizationTable(_quantizationTables[identifier]);
@@ -44,8 +46,6 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "}" << std::endl;
   return 0;
 }
-
-int mark::DQT::package(ofstream &outputFile) { return 0; };
 
 /* 这个函数不参与实际的解码(Option) */
 void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
@@ -59,3 +59,25 @@ void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
   arrayToMatrixUseZigZag(a, matrix);
   printMatrix(matrix);
 }
+
+int mark::DQT::package(ofstream &outputFile) {
+  header.len = htons(sizeof(header) - 2);
+
+  uint8_t precision = 0; // 8 bit
+  // uint8_t precision = 1; //16 bit
+  uint8_t identifier = 1;
+
+  header.PqTq = precision;
+  header.PqTq <<= 4;
+  header.PqTq |= identifier;
+
+  for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++) {
+    header.element[i] = i;
+  }
+  uint8_t *tmp = new uint8_t[sizeof(header)];
+  memcpy(tmp, &header, sizeof(header));
+  outputFile.write((const char *)tmp, sizeof(header));
+  delete[] tmp;
+  tmp = nullptr;
+  return 0;
+};
