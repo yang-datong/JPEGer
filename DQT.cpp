@@ -45,7 +45,7 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
   return 0;
 }
 
-int mark::DQT::package(uint8_t *&buf, int &bufSize) { return 0; };
+int mark::DQT::package(ofstream &outputFile) { return 0; };
 
 /* 这个函数不参与实际的解码(Option) */
 void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {

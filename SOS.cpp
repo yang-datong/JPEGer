@@ -41,7 +41,7 @@ int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   return 0;
 }
 
-int mark::SOS::package(uint8_t *&buf, int &bufSize) { return 0; };
+int mark::SOS::package(ofstream &outputFile) { return 0; };
 
 int mark::SOS::scanEntropyCodingImageData(ByteStream &bs) {
   uint16_t a = 1;

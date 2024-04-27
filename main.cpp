@@ -7,8 +7,8 @@ int main() {
   string inputFileName = "./lenna.yuv";
   string outputFileName = "./demo.jpg";
 
-  // string inputFileName = "./lenna.jpg";
-  // string outputFileName = "./demo";
+  // inputFileName = "./lenna.jpg";
+  // outputFileName = "./demo";
 
   int ret = -1;
   string suffixStr = getFileType(inputFileName);

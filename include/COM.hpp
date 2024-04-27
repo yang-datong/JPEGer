@@ -4,10 +4,17 @@
 #include "Marker.hpp"
 
 namespace mark {
+
+typedef struct __attribute__((packed)) _COM {
+  uint8_t COM[2] = {0xff, JFIF::COM};
+  uint16_t len = 0;
+} COMHeader;
+
 class COM : public Marker {
  public:
+  COMHeader header;
   int parse(int index, uint8_t *buf, int bufSize) override;
-  int package(uint8_t *&buf, int &bufSize) override;
+  int package(ofstream &outputFile) override;
 };
 } // namespace mark
 

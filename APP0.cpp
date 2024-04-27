@@ -1,5 +1,6 @@
 #include "APP0.hpp"
 #include <cstdint>
+#include <cstring>
 #include <netinet/in.h>
 #include <vector>
 
@@ -7,36 +8,37 @@ int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
   len = bs.readBytes<uint16_t>(2);
   std::cout << "APP0[" << index << "~" << len + index << "] --> {" << std::endl;
-  for (int i = 0; i < (int)sizeof(identifier); i++)
-    identifier[i] = bs.readByte();
+  for (int i = 0; i < (int)sizeof(header.identifier); i++)
+    header.identifier[i] = bs.readByte();
 
-  std::cout << "\tidentifier{" << identifier[0] << "," << identifier[1] << ","
-            << identifier[2] << "," << identifier[3] << "," << identifier[4]
-            << "}" << std::endl;
+  std::cout << "\theader.identifier{" << header.identifier[0] << ","
+            << header.identifier[1] << "," << header.identifier[2] << ","
+            << header.identifier[3] << "," << header.identifier[4] << "}"
+            << std::endl;
 
-  for (int i = 0; i < (int)sizeof(jfifVersion); i++)
-    jfifVersion[i] = bs.readByte();
+  for (int i = 0; i < (int)sizeof(header.jfifVersion); i++)
+    header.jfifVersion[i] = bs.readByte();
 
-  std::cout << "\tJFIFVersion:" << (int)jfifVersion[0] << "."
-            << (int)jfifVersion[1] << endl;
+  std::cout << "\tJFIFVersion:" << (int)header.jfifVersion[0] << "."
+            << (int)header.jfifVersion[1] << endl;
 
-  unit = bs.readByte();
-  if (unit == 0)
-    std::cout << "\tdensity unit: 无单位" << std::endl;
-  else if (unit == 1)
-    std::cout << "\tdensity unit: 每英寸像素" << std::endl;
-  else if (unit == 2)
-    std::cout << "\tdensity unit: 每厘米像素" << std::endl;
+  header.unit = bs.readByte();
+  if (header.unit == 0)
+    std::cout << "\tdensity header.unit: 无单位" << std::endl;
+  else if (header.unit == 1)
+    std::cout << "\tdensity header.unit: 每英寸像素" << std::endl;
+  else if (header.unit == 2)
+    std::cout << "\tdensity header.unit: 每厘米像素" << std::endl;
 
-  Xdensity = bs.readBytes<uint16_t>(2);
-  std::cout << "\tXdensity:" << Xdensity << std::endl;
-  Ydensity = bs.readBytes<uint16_t>(2);
-  std::cout << "\tYdensity:" << Ydensity << std::endl;
+  header.Xdensity = bs.readBytes<uint16_t>(2);
+  std::cout << "\tXdensity:" << header.Xdensity << std::endl;
+  header.Ydensity = bs.readBytes<uint16_t>(2);
+  std::cout << "\tYdensity:" << header.Ydensity << std::endl;
 
-  Xthumbnail = bs.readByte();
-  std::cout << "\tXthumbnail:" << (int)Xthumbnail << std::endl;
-  Ythumbnail = bs.readByte();
-  std::cout << "\tYthumbnail:" << (int)Ythumbnail << std::endl;
+  header.Xthumbnail = bs.readByte();
+  std::cout << "\tXthumbnail:" << (int)header.Xthumbnail << std::endl;
+  header.Ythumbnail = bs.readByte();
+  std::cout << "\tYthumbnail:" << (int)header.Ythumbnail << std::endl;
 
   int remain = len - bs.getActualReadSize();
   uint8_t thumbnailImage[remain];
@@ -52,59 +54,28 @@ int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   return 0;
 }
 
-int mark::APP0::package(uint8_t *&buf, int &bufSize) {
-  /* TODO YangJing 思考用vector会不会更加方便 <24-04-24 23:54:44> */
-  //  vector<uint8_t> pack;
-  uint8_t APP0[2] = {0xff, JFIF::APP0};
-  identifier[0] = 0x4a;
-  identifier[1] = 0x46;
-  identifier[2] = 0x49;
-  identifier[3] = 0x46;
-  identifier[4] = 0;
+int mark::APP0::package(ofstream &outputFile) {
+  header.len = htons(sizeof(header) - 2);
 
-  jfifVersion[0] = 1;
-  jfifVersion[1] = 1;
-  unit = 1;
+  header.identifier[0] = 0x4a;
+  header.identifier[1] = 0x46;
+  header.identifier[2] = 0x49;
+  header.identifier[3] = 0x46;
+  header.identifier[4] = 0;
 
-  /* 对于二个字节以上的，需要转换大小端 */
-  Xdensity = htons(72);
-  Ydensity = htons(72);
-  Xthumbnail = 0;
-  Ythumbnail = 0;
+  header.jfifVersion[0] = 1;
+  header.jfifVersion[1] = 1;
+  header.unit = 1;
 
-  len = sizeof(APP0) + sizeof(identifier) + sizeof(jfifVersion) + sizeof(unit) +
-        sizeof(Xdensity) + sizeof(Ydensity) + sizeof(Xthumbnail) +
-        sizeof(Ythumbnail);
+  header.Xdensity = htons(72);
+  header.Ydensity = htons(72);
+  header.Xthumbnail = 0;
+  header.Ythumbnail = 0;
 
-  bufSize = len + sizeof(len);
-  // 创建足够大的缓冲区
-  uint8_t *buffer = new uint8_t[bufSize];
-
-  // 指向缓冲区当前写入位置的指针
-  uint8_t *p = buffer;
-
-  // 将数据按顺序复制到缓冲区
-  memcpy(p, APP0, sizeof(APP0));
-  p += sizeof(APP0);
-  len = htons(len);
-  memcpy(p, &len, sizeof(len));
-  p += sizeof(len);
-  memcpy(p, identifier, sizeof(identifier));
-  p += sizeof(identifier);
-  memcpy(p, jfifVersion, sizeof(jfifVersion));
-  p += sizeof(jfifVersion);
-  memcpy(p, &unit, sizeof(unit));
-  p += sizeof(unit);
-  memcpy(p, &Xdensity, sizeof(Xdensity));
-  p += sizeof(Xdensity);
-  memcpy(p, &Ydensity, sizeof(Ydensity));
-  p += sizeof(Ydensity);
-  memcpy(p, &Xthumbnail, sizeof(Xthumbnail));
-  p += sizeof(Xthumbnail);
-  memcpy(p, &Ythumbnail, sizeof(Ythumbnail));
-  p += sizeof(Ythumbnail);
-
-  buf = buffer;
-  p = nullptr;
+  uint8_t *tmp = new uint8_t[sizeof(header)];
+  memcpy(tmp, &header, sizeof(header));
+  outputFile.write((const char *)tmp, sizeof(header));
+  delete[] tmp;
+  tmp = nullptr;
   return 0;
 }

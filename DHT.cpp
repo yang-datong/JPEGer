@@ -62,7 +62,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
   return 0;
 }
 
-int mark::DHT::package(uint8_t *&buf, int &bufSize) { return 0; };
+int mark::DHT::package(ofstream &outputFile) { return 0; };
 
 void mark::DHT::printHuffmanTable(const HuffmanTable &hf) {
   for (int i = 0; i < HUFFMAN_CODE_LENGTH_POSSIBLE; i++) {

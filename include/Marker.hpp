@@ -10,7 +10,9 @@ class Marker {
   uint16_t len = 0;
   virtual ~Marker() {}
   virtual int parse(int index, uint8_t *buf, int bufSize) = 0;
-  virtual int package(uint8_t *&buf, int &bufSize) = 0;
+
+  /* 对于二个字节以上的，需要转换大小端 */
+  virtual int package(ofstream &outputFile) = 0;
 };
 
 #endif /* end of include guard: MARKER_HPP_WXZAZHWM */

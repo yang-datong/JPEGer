@@ -23,7 +23,6 @@ Encoder::Encoder(const string &inputFilePath, const string &outputFilePath,
 Encoder::~Encoder() {
   _bufSize = 0;
   SAFE_DELETE_ARRAY(_buf);
-
   SAFE_DELETE(_app0);
   SAFE_DELETE(_com);
   SAFE_DELETE(_dqt);
@@ -35,15 +34,12 @@ Encoder::~Encoder() {
 int Encoder::startMakeMarker() {
   ofstream outputFile(_outputFilePath, ios_base::binary);
   std::cout << "_outputFilePath:" << _outputFilePath << std::endl;
+
   uint8_t SOI[2] = {0xff, JFIF::SOI};
   outputFile.write((const char *)SOI, sizeof(SOI));
 
-  uint8_t *buf = nullptr;
-  int bufSize = 0;
-  _app0->package(buf, bufSize);
-  outputFile.write((const char *)buf, bufSize);
-  delete[] buf;
-  buf = nullptr;
+  _app0->package(outputFile);
+  _com->package(outputFile);
 
   return 0;
 }

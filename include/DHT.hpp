@@ -15,7 +15,7 @@ class DHT : public Marker {
  public:
   /* ISO/IEC 10918-1 : 1993(E) : page 40  */
   int parse(int index, uint8_t *buf, int bufSize) override;
-  int package(uint8_t *&buf, int &bufSize) override;
+  int package(ofstream &outputFile) override;
 
   const HuffmanTrees &getHuffmanTree() { return _huffmanTree; }
 
