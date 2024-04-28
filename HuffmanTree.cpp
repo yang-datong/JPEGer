@@ -77,7 +77,7 @@ void HuffmanTree::printHuufmanTree(NodePtr node, string str) {
     std::cout << ", ";
 }
 
-int HuffmanTree::builedHuffmanTree(HuffmanTable &htable) {
+int HuffmanTree::buildHuffmanTree(HuffmanTable &htable) {
   _root = createRootNode(0);
   insertLeft(_root, 0);
   insertRight(_root, 0);

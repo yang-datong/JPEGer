@@ -91,6 +91,7 @@ int mark::DQT::buildLumaDQTable(ofstream &outputFile) {
       tmp = 255;
     header.element[i] = tmp;
   }
+  /* TODO YangJing ZigZag顺序 <24-04-28 21:07:32> */
 
   uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));

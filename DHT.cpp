@@ -60,7 +60,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
     /* TODO-YangJing感觉这里直接用hfTable[readedSymbols].second放到header.huffmanCodes也可以<24-04-28-12:48:00>*/
     printHuffmanTable(hfTable);
     /* TODO YangJing HuffmanTree 还是有点没搞懂，需要重新写<24-04-15-17:54:18>*/
-    _huffmanTree[huffmanTableClass][huffmanTableIdentifier].builedHuffmanTree(
+    _huffmanTree[huffmanTableClass][huffmanTableIdentifier].buildHuffmanTree(
         hfTable);
   }
   std::cout << "}" << std::endl;
@@ -83,6 +83,8 @@ void mark::DHT::printHuffmanTable(const HuffmanTable &hf) {
 int mark::DHT::package(ofstream &outputFile) {
   buildLumaTable(0, outputFile);
   buildChromaTable(1, outputFile);
+  /* TODO YangJing  <24-04-28 21:56:26> */
+  //_huffmanTree[0].buildHuffmanTree();
   return 0;
 };
 

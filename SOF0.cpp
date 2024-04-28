@@ -69,11 +69,19 @@ int mark::SOF0::package(ofstream &outputFile) {
 
   ImageComponent imageComponent[comCount];
 
-  for (int i = 0; i < comCount; i++) {
-    imageComponent[i].componentIdentifier = i + 1;
-    imageComponent[i].sampFactor = 0b0001'0001;
-    imageComponent[i].destinationSelector = 1;
-  }
+  // YUV 444：即sampFactor均为1
+  /* Y分量 */
+  imageComponent[0].componentIdentifier = 1;
+  imageComponent[0].sampFactor = 0b0001'0001;
+  imageComponent[0].destinationSelector = 0;
+  /* U分量 */
+  imageComponent[1].componentIdentifier = 2;
+  imageComponent[1].sampFactor = 0b0001'0001;
+  imageComponent[1].destinationSelector = 1;
+  /* V分量 */
+  imageComponent[2].componentIdentifier = 3;
+  imageComponent[2].sampFactor = 0b0001'0001;
+  imageComponent[2].destinationSelector = 1;
 
   uint8_t tmp2[comCount * sizeof(ImageComponent)] = {0};
   memcpy(tmp2, imageComponent, comCount * sizeof(ImageComponent));
