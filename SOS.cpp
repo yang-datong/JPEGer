@@ -2,37 +2,44 @@
 
 int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
-  uint16_t len = bs.readBytes<uint16_t>(2);
-  std::cout << "SOS[" << index << "~" << index + len << "] --> {" << std::endl;
+  header.len = bs.readBytes<uint16_t>(2);
+  std::cout << "SOS[" << index << "~" << index + header.len << "] --> {"
+            << std::endl;
 
-  _imageComponentCount = bs.readByte();
-  std::cout << "\timageComponentCount:" << (int)_imageComponentCount
+  header.imageComponentCount = bs.readByte();
+  std::cout << "\timageComponentCount:" << (int)header.imageComponentCount
             << std::endl;
   std::cout << "\timageComponent{" << std::endl;
-  for (int i = 0; i < _imageComponentCount; i++) {
+  for (int i = 0; i < header.imageComponentCount; i++) {
     /* 扫描分量选择器 */
-    uint8_t scanComponentSelector = bs.readByte();
-    std::cout << "\t\tscanComponentSelector:" << (int)scanComponentSelector;
-    uint8_t TdTa = bs.readByte();
+    /* TODO YangJing
+     * 这里严重有问题：如果header.imageComponentCount不为3则很危险，不过正常情况下都是3，先这样吧
+     * <24-04-28 19:41:07> */
+    header.scanComponent[i].scanComponentSelector = bs.readByte();
+    std::cout << "\t\tscanComponentSelector:"
+              << (int)header.scanComponent[i].scanComponentSelector;
+    header.scanComponent[i].TdTa = bs.readByte();
     /* DC,AC熵编码表目的地选择器 */
-    uint8_t entropyCodingTableDestinationSelectorDC = TdTa >> 4;
+    uint8_t entropyCodingTableDestinationSelectorDC =
+        header.scanComponent[i].TdTa >> 4;
     std::cout << ",entropyCodingTableDestinationSelectorDC:"
               << (int)entropyCodingTableDestinationSelectorDC;
-    uint8_t entropyCodingTableDestinationSelectorAC = TdTa & 0b1111;
+    uint8_t entropyCodingTableDestinationSelectorAC =
+        header.scanComponent[i].TdTa & 0b1111;
     std::cout << ",entropyCodingTableDestinationSelectorAC:"
               << (int)entropyCodingTableDestinationSelectorAC << std::endl;
   }
   std::cout << "\t}" << std::endl;
 
-  uint8_t startOfSpectral = bs.readByte();
-  std::cout << "\tstartOfSpectral:" << (int)startOfSpectral << std::endl;
-  uint8_t endOfSpectral = bs.readByte();
-  std::cout << "\tendOfSpectral:" << (int)endOfSpectral << std::endl;
-  uint8_t AhAl = bs.readByte();
-  uint8_t successiveApproximationBitH = AhAl >> 4;
+  header.startOfSpectral = bs.readByte();
+  std::cout << "\tstartOfSpectral:" << (int)header.startOfSpectral << std::endl;
+  header.endOfSpectral = bs.readByte();
+  std::cout << "\tendOfSpectral:" << (int)header.endOfSpectral << std::endl;
+  header.AhAl = bs.readByte();
+  uint8_t successiveApproximationBitH = header.AhAl >> 4;
   std::cout << "\tsuccessiveApproximationBitH:"
             << (int)successiveApproximationBitH << std::endl;
-  uint8_t successiveApproximationBitL = AhAl & 0b1111;
+  uint8_t successiveApproximationBitL = header.AhAl & 0b1111;
   std::cout << "\tsuccessiveApproximationBitL:"
             << (int)successiveApproximationBitL << std::endl;
 
@@ -40,8 +47,6 @@ int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   scanEntropyCodingImageData(bs);
   return 0;
 }
-
-int mark::SOS::package(ofstream &outputFile) { return 0; };
 
 int mark::SOS::scanEntropyCodingImageData(ByteStream &bs) {
   uint16_t a = 1;
@@ -55,3 +60,23 @@ int mark::SOS::scanEntropyCodingImageData(ByteStream &bs) {
   }
   return 0;
 }
+
+int mark::SOS::package(ofstream &outputFile) {
+  header.len = htons(sizeof(header) - 2);
+
+  header.imageComponentCount = 3;
+
+  for (int i = 0; i < SCAN_COMPONENT; i++) {
+    header.scanComponent[i].scanComponentSelector = 0;
+    header.scanComponent[i].TdTa = 0b0000'0000;
+  }
+
+  header.startOfSpectral = 0;
+  header.endOfSpectral = 63;
+  header.AhAl = 0;
+
+  uint8_t tmp[sizeof(header)] = {0};
+  memcpy(tmp, &header, sizeof(header));
+  outputFile.write((const char *)tmp, sizeof(header));
+  return 0;
+};

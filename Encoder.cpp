@@ -43,6 +43,10 @@ int Encoder::startMakeMarker() {
   _dqt->package(outputFile);
   _sof0->package(outputFile);
   _dht->package(outputFile);
+  _sos->package(outputFile);
 
+  uint8_t EOI[2] = {0xff, JFIF::EOI};
+  outputFile.write((const char *)EOI, sizeof(EOI));
+  outputFile.close();
   return 0;
 }
