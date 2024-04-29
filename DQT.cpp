@@ -1,5 +1,7 @@
 #include "DQT.hpp"
+#include "Common.hpp"
 #include "Type.hpp"
+#include <cstdint>
 
 int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
@@ -61,64 +63,39 @@ void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
   printMatrix(matrix);
 }
 
-#define QUANTIZATION_FLOAT 100
 int mark::DQT::package(ofstream &outputFile) {
   int ret = -1;
-  ret |= buildLumaDQTable(outputFile);
-  ret |= buildChromaDQTable(outputFile);
+  ret |= buildDQTable(0, LumaTable, outputFile);
+  ret |= buildDQTable(1, ChromaTable, outputFile);
   if (ret)
     return -1;
   return 0;
 };
 
-int mark::DQT::buildLumaDQTable(ofstream &outputFile) {
+int mark::DQT::buildDQTable(
+    const uint8_t id,
+    const uint8_t (&componentTab)[COMPONENT_SIZE][COMPONENT_SIZE],
+    ofstream &outputFile) {
   header.len = htons(sizeof(header) - 2);
 
   uint8_t precision = 0; // 8 bit
   // uint8_t precision = 1; //16 bit
-  uint8_t identifier = 0;
+  uint8_t identifier = id;
 
   header.PqTq = precision;
   header.PqTq <<= 4;
   header.PqTq |= identifier;
 
+  uint8_t matrix[COMPONENT_SIZE][COMPONENT_SIZE];
   float alpha = 2.0f - QUANTIZATION_FLOAT / 50.0f;
-  for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++) {
-    float tmp = _lumaTable[i] * alpha;
-    if (tmp < 1)
-      tmp = 1;
-    else if (tmp > 255)
-      tmp = 255;
-    header.element[i] = tmp;
+  for (int i = 0; i < COMPONENT_SIZE; i++) {
+    for (int j = 0; j < COMPONENT_SIZE; j++) {
+      float tmp = componentTab[i][j] * alpha;
+      tmp = tmp < 1 ? 1 : tmp > 255 ? 255 : tmp;
+      matrix[i][j] = tmp;
+    }
   }
-  /* TODO YangJing ZigZag顺序 <24-04-28 21:07:32> */
-
-  uint8_t tmp[sizeof(header)] = {0};
-  memcpy(tmp, &header, sizeof(header));
-  outputFile.write((const char *)tmp, sizeof(header));
-  return 0;
-}
-
-int mark::DQT::buildChromaDQTable(ofstream &outputFile) {
-  header.len = htons(sizeof(header) - 2);
-
-  uint8_t precision = 0; // 8 bit
-  // uint8_t precision = 1; //16 bit
-  uint8_t identifier = 1;
-
-  header.PqTq = precision;
-  header.PqTq <<= 4;
-  header.PqTq |= identifier;
-
-  float alpha = 2.0f - QUANTIZATION_FLOAT / 50.0f;
-  for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++) {
-    float tmp = _chromaTable[i] * alpha;
-    if (tmp < 1)
-      tmp = 1;
-    else if (tmp > 255)
-      tmp = 255;
-    header.element[i] = tmp;
-  }
+  matrixToArrayUseZigZag(matrix, header.element);
 
   uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));

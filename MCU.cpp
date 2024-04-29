@@ -33,6 +33,7 @@ void MCU::decodeACandDC() {
     }
 
     /*2. 对DC系数进行差分解码*/
+    /* TODO YangJing 这里用int应该有问题，应该是uint8_t <24-04-29 20:33:35> */
     int &DC = zzOrder[0]; // DC系数（第一个系数，代表块的平均值）
     _DCDiff[imageComponent] += DC;
     DC = _DCDiff[imageComponent];

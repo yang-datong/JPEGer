@@ -82,37 +82,38 @@ void mark::DHT::printHuffmanTable(const HuffmanTable &hf) {
 
 int mark::DHT::package(ofstream &outputFile) {
 
-  buildLumaTable(0, 0, outputFile); // Y,DC
-  buildLumaTable(1, 0, outputFile); // Y,DC
-  buildLumaTable(0, 1, outputFile); // Y,DC
-  buildLumaTable(1, 1, outputFile); // Y,DC
+  buildHuffmanTable(0, 0, HuffmanLumaDCLenTable, HuffmanLumaDCValueTable,
+                    outputFile); // Y,DC
+  buildHuffmanTable(1, 0, HuffmanLumaACLenTable, HuffmanLumaACValueTable,
+                    outputFile); // Y,AC
+  buildHuffmanTable(0, 1, HuffmanChromaDCLenTable, HuffmanChromaDCValueTable,
+                    outputFile); // UV,DC
+  buildHuffmanTable(1, 1, HuffmanChromaACLenTable, HuffmanChromaACValueTable,
+                    outputFile); // UV,AC
 
-  // buildLumaTable(0, 0, outputFile);   // Y,DC
-  // buildChromaTable(1, 0, outputFile); // Y,AC
-  // buildLumaTable(0, 1, outputFile);   // UV,DC
-  // buildChromaTable(1, 1, outputFile); // UV,AC
   /* TODO YangJing  <24-04-28 21:56:26> */
   //_huffmanTree[0].buildHuffmanTree();
   return 0;
 };
 
-int mark::DHT::buildLumaTable(uint8_t coefficientType, uint8_t id,
-                              ofstream &outputFile) {
+int mark::DHT::buildHuffmanTable(uint8_t coefficientType, uint8_t id,
+                                 const uint8_t *_huffmanCodeLens,
+                                 const uint8_t *_huffmanCodes,
+                                 ofstream &outputFile) {
   uint8_t TcTh = coefficientType; /* DC or AC */
   TcTh <<= 4;
   TcTh |= id;
   header.TcTh = TcTh;
-
   int totalSymbolCount = 0;
   for (int i = 0; i < HUFFMAN_CODE_LENGTH_POSSIBLE; i++) {
-    header.huffmanCodeLens[i] = i;
-    totalSymbolCount += i;
+    header.huffmanCodeLens[i] = _huffmanCodeLens[i];
+    totalSymbolCount += _huffmanCodeLens[i];
   }
 
   uint8_t *huffmanCodes = new uint8_t[totalSymbolCount];
-  for (int i = 0; i < totalSymbolCount; i++) {
-    huffmanCodes[i] = i;
-  }
+  for (int i = 0; i < totalSymbolCount; i++)
+    huffmanCodes[i] = _huffmanCodes[i];
+
   header.huffmanCodes = huffmanCodes;
 
   /* 减去一个指针大小，加上后面的HuffmanCodes */
@@ -123,12 +124,6 @@ int mark::DHT::buildLumaTable(uint8_t coefficientType, uint8_t id,
 
   // 减去最后的一个指针大小
   outputFile.write((const char *)tmp, sizeof(header) - sizeof(void *));
-
   outputFile.write((const char *)huffmanCodes, totalSymbolCount);
   return 0;
 }
-
-// int mark::DHT::buildChromaTable(uint8_t coefficientType, uint8_t id,
-//                                 ofstream &outputFile) {
-//   return 0;
-// }

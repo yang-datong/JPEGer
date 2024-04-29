@@ -81,8 +81,12 @@ int mark::SOS::package(ofstream &outputFile) {
   header.endOfSpectral = 63;
   header.AhAl = 0;
 
+  entropyCodingImageData();
+
   uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));
   outputFile.write((const char *)tmp, sizeof(header));
   return 0;
 };
+
+int mark::SOS::entropyCodingImageData() { return 0; }

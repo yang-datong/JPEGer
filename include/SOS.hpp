@@ -40,6 +40,7 @@ class SOS : public Marker {
  private:
   /* 读取编码图像数据 */
   int scanEntropyCodingImageData(ByteStream &bs);
+  int entropyCodingImageData();
 };
 } // namespace mark
 #endif /* end of include guard: SOS_HPP_WCIRKBS1 */

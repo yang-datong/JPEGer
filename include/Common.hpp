@@ -46,9 +46,12 @@ printMatrix(const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> matrix) {
   }
 }
 
-void arrayToMatrixUseZigZag(
-    const array<int, MCU_UNIT_SIZE> a,
+int arrayToMatrixUseZigZag(
+    const array<int, MCU_UNIT_SIZE> arr,
     array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix);
+
+int matrixToArrayUseZigZag(const uint8_t matrix[COMPONENT_SIZE][COMPONENT_SIZE],
+                           uint8_t arr[MCU_UNIT_SIZE]);
 
 inline string getFileType(string &fileName) {
   return fileName.substr(fileName.find_last_of('.') + 1);
