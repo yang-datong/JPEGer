@@ -3,17 +3,26 @@
 #include "Encoder.hpp"
 #include "Type.hpp"
 
-int main() {
+int main(int argc, char *argv[]) {
+  /* 不指定参数则执行编码操作 */
   string inputFileName = "./lenna.yuv";
   string outputFileName = "./demo.jpg";
-
-  // inputFileName = "./demo.jpg";
-  // outputFileName = "./demo";
+  if (argc > 2) {
+    inputFileName = argv[1];
+    outputFileName = argv[2];
+  }
 
   int ret = -1;
-  string suffixStr = getFileType(inputFileName);
-  if (suffixStr == "jpg" || suffixStr == "jpeg") {
-    Decoder decoder(inputFileName, FileFormat::YUV);
+  string inSuffixStr = getFileType(inputFileName);
+  string outSuffixStr = getFileType(outputFileName);
+  int inpuType = FileFormat::YUV, outType = FileFormat::YUV;
+
+  if (inSuffixStr == "jpg" || inSuffixStr == "jpeg") {
+    if (outSuffixStr == "yuv")
+      outType = FileFormat::YUV;
+    else if (outSuffixStr == "ppm")
+      outType = FileFormat::PPM;
+    Decoder decoder(inputFileName, outType);
     std::cout << "-------------------------------------------- startFindMarker "
                  "--------------------------------------------"
               << std::endl;
@@ -32,7 +41,7 @@ int main() {
     ret = decoder.createImage(outputFileName);
     RET(ret, "Failed for createImage()")
   } else {
-    Encoder encoder(inputFileName, outputFileName, FileFormat::YUV);
+    Encoder encoder(inputFileName, outputFileName, inpuType);
     std::cout << "---------------------------------------------- createImage "
                  "----------------------------------------------"
               << std::endl;

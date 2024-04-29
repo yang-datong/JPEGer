@@ -57,7 +57,7 @@ int Image::createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
 int Image::outputToYUVFile(const string &outputFileName) {
   if (this->_imgWidth <= 0 || this->_imgHeight <= 0)
     return -1;
-  ofstream outputFile(outputFileName + ".yuv", std::ios::out);
+  ofstream outputFile(outputFileName, std::ios::out);
   if (!outputFile.is_open() || !outputFile.good()) {
     cout << "Unable to create dump file \'" + outputFileName + "\'."
          << std::endl;
@@ -82,9 +82,9 @@ int Image::outputToYUVFile(const string &outputFileName) {
   outputFile.write((const char *)bufferCr.data(), bufferCr.size());
 
   cout << "Raw image data dumped to file: " + outputFileName +
-              "    `ffplay -video_size "
+              " `ffplay -video_size "
        << _imgWidth << "x" << _imgHeight << " -pixel_format yuv444p  "
-       << outputFileName << ".yuv`" << std::endl;
+       << outputFileName << std::endl;
   outputFile.close();
   return 0;
 }
@@ -96,7 +96,7 @@ int Image::outputToPPMFile(const string &outputFileName) {
     std::cerr << "\033[31mFail init _pixelPtr\033[0m" << std::endl;
     return -1;
   }
-  std::ofstream outputFile(outputFileName + ".ppm", std::ios::out);
+  std::ofstream outputFile(outputFileName, std::ios::out);
 
   if (!outputFile.is_open() || !outputFile.good()) {
     cout << "Unable to create dump file \'" + outputFileName + "\'."
@@ -116,8 +116,7 @@ int Image::outputToPPMFile(const string &outputFileName) {
                  << (uint8_t)pixel.comp[RGBComponents::BLUE];
   }
 
-  cout << "Raw image data dumped to file: " + outputFileName + ".ppm"
-       << std::endl;
+  cout << "Raw image data dumped to file: " + outputFileName << std::endl;
   outputFile.close();
   return 0;
 }
