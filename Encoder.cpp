@@ -1,5 +1,7 @@
 #include "Encoder.hpp"
 #include "APP0.hpp"
+#include "Common.hpp"
+#include "Image.hpp"
 #include <cstdint>
 #include <fstream>
 #include <ios>
@@ -32,8 +34,38 @@ Encoder::~Encoder() {
 }
 
 int Encoder::startMakeMarker() {
+  /* TODO YangJing 暂时写死宽高 <24-04-29 22:11:07> */
+  const int imgWidth = 512, imgHeight = 512;
+
+  /* TODO YangJing 这里要放在另一个地方，或者说截取下面的一部分放在MCU.cpp中
+   * <24-04-29 22:24:29> */
   ofstream outputFile(_outputFilePath, ios_base::binary);
+  std::cout << "_inputFilePath:" << _inputFilePath << std::endl;
   std::cout << "_outputFilePath:" << _outputFilePath << std::endl;
+  uint8_t *buffer = nullptr;
+  int bufferSize = 0;
+  if (Image::readYUVFile(_inputFilePath, buffer, bufferSize))
+    return -1;
+
+  /* YUV444p */
+  if (bufferSize != (imgWidth * imgHeight) * 3) {
+    std::cout << "Only support YUV444p" << std::endl;
+    return -1;
+  }
+
+  int WH = imgWidth * imgHeight;
+  int bufferYSzie = WH, bufferUSize = WH, bufferVSize = WH;
+  uint8_t *bufferY = buffer;
+  uint8_t *bufferU = buffer + WH;
+  uint8_t *bufferV = buffer + WH * 2;
+
+  /* TODO YangJing 明天做 <24-04-29 22:26:30> */
+  //  for (int y = 0; y < imgHeight; y += 8) {
+  //    for (int x = 0; x < imgWidth; x += 8) {
+  //    }
+  //  }
+
+  /* TODO YangJing  <24-04-29 22:24:05> */
 
   uint8_t SOI[2] = {0xff, JFIF::SOI};
   outputFile.write((const char *)SOI, sizeof(SOI));
@@ -47,6 +79,9 @@ int Encoder::startMakeMarker() {
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));
+
+  SAFE_DELETE_ARRAY(buffer);
+  bufferSize = 0;
   outputFile.close();
   return 0;
 }

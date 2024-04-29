@@ -14,6 +14,8 @@ MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
 
   decodeACandDC();
   startIDCT();
+  /* 还原数值范围[0,255] -> [-128,127] */
+  performLevelShift();
   if (Image::sOutputFileType != FileFormat::YUV)
     YUVToRGB();
 }
@@ -50,10 +52,33 @@ void MCU::decodeACandDC() {
   }
 }
 
+inline void MCU::startDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    float sum = 0.0;
+
+    for (int v = 0; v < COMPONENT_SIZE; ++v) {
+      for (int u = 0; u < COMPONENT_SIZE; ++u) {
+
+        for (int i = 0; i < COMPONENT_SIZE; ++i) {
+          for (int j = 0; j < COMPONENT_SIZE; ++j) {
+            sum += _matrix[imageComponent][i][j] *
+                   cos((2 * i + 1) * u * M_PI / 16) *
+                   cos((2 * j + 1) * v * M_PI / 16);
+          }
+        }
+
+        float Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
+        float Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+        _dctCoeffs[imageComponent][u][v] = (Cu * Cv) / 4.0 * sum;
+      }
+    }
+  }
+}
+
 inline void MCU::startIDCT() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    for (int y = 0; y < COMPONENT_SIZE; ++y) {
-      for (int x = 0; x < COMPONENT_SIZE; ++x) {
+    for (int j = 0; j < COMPONENT_SIZE; ++j) {
+      for (int i = 0; i < COMPONENT_SIZE; ++i) {
         float sum = 0.0;
 
         for (int u = 0; u < COMPONENT_SIZE; ++u) {
@@ -62,17 +87,15 @@ inline void MCU::startIDCT() {
             float Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
 
             sum += Cu * Cv * _matrix[imageComponent][u][v] *
-                   cos((2 * x + 1) * u * M_PI / 16.0) *
-                   cos((2 * y + 1) * v * M_PI / 16.0);
+                   cos((2 * i + 1) * u * M_PI / 16.0) *
+                   cos((2 * j + 1) * v * M_PI / 16.0);
           }
         }
 
-        _idctCoeffs[imageComponent][x][y] = 1.0 / 4.0 * sum;
+        _idctCoeffs[imageComponent][i][j] = 1.0 / 4.0 * sum;
       }
     }
   }
-  /* 还原数值范围[0,255] -> [-128,127] */
-  performLevelShift();
 }
 
 /* 反中心化（反级别移位）*/

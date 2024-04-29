@@ -15,6 +15,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <sstream>
+#include <string.h>
 #include <string>
 #include <vector>
 
@@ -61,6 +62,9 @@ typedef array<array<array<int, 8>, 8>, 3> CompMatrices;
 
 /* 3个二维逆DCT系数 */
 typedef array<array<array<float, 8>, 8>, 3> IDCTCoeffs;
+
+/* 3个二维DCT系数 */
+typedef array<array<array<float, 8>, 8>, 3> DCTCoeffs;
 
 /* 量化表 */
 const uint8_t LumaTable[COMPONENT_SIZE][COMPONENT_SIZE] = {

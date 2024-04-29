@@ -31,44 +31,8 @@ Decoder::~Decoder() {
   SAFE_DELETE(_sos);
 }
 
-int Decoder::readFile() {
-  _file.open(_filePath, std::ios::binary | std::ios::in);
-  if (!_file.is_open())
-    return -1;
-
-  /* 适当调整，读取一个17M的文件要花近1分钟 */
-  const int readBufSize = 1024;
-  /* 适当调整，读取一个17M的文件要花近1秒 */
-  // const int readBufSize = 1024 * 1024;
-  bool isRead = false;
-
-  uint8_t *fileBuffer = new uint8_t[readBufSize];
-  while (!isRead) {
-    _file.read(reinterpret_cast<char *>(fileBuffer), readBufSize);
-    if (_file.gcount() != 0) {
-      uint8_t *const tmp = new uint8_t[_bufSize + _file.gcount()];
-      memcpy(tmp, _buf, _bufSize);
-      memcpy(tmp + _bufSize, fileBuffer, _file.gcount());
-      if (_buf) {
-        delete[] _buf;
-        _buf = nullptr;
-      }
-      _buf = tmp;
-      _bufSize += _file.gcount();
-    } else
-      isRead = true;
-  }
-  delete[] fileBuffer;
-  fileBuffer = nullptr;
-  _file.close();
-
-  if (!_file.eof() && _file.fail())
-    return -2;
-  return 0;
-}
-
 int Decoder::startFindMarker() {
-  if (readFile())
+  if (Image::readJPEGFile(_filePath, _buf, _bufSize))
     return -1;
 
   /* 不读取最后一个字节 */

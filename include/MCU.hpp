@@ -18,8 +18,10 @@ class MCU {
 
   CompMatrices _matrix;
   IDCTCoeffs _idctCoeffs;
+  DCTCoeffs _dctCoeffs;
 
   void decodeACandDC();
+  inline void startDCT();
   inline void startIDCT();
   inline void performLevelShift();
   inline void YUVToRGB();

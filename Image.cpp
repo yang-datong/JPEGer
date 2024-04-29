@@ -1,5 +1,6 @@
 #include "Image.hpp"
 #include "Type.hpp"
+#include <fstream>
 
 int Image::sOutputFileType = FileFormat::PPM;
 int Image::sInputFileType = FileFormat::YUV;
@@ -118,5 +119,51 @@ int Image::outputToPPMFile(const string &outputFileName) {
   cout << "Raw image data dumped to file: " + outputFileName + ".ppm"
        << std::endl;
   outputFile.close();
+  return 0;
+}
+
+int Image::readJPEGFile(const string &filePath, uint8_t *&buf, int &bufSize) {
+  return readFile(filePath, buf, bufSize);
+}
+
+int Image::readYUVFile(const string &filePath, uint8_t *&buf, int &bufSize) {
+  return readFile(filePath, buf, bufSize);
+}
+
+int Image::readFile(const string &filePath, uint8_t *&buf, int &bufSize) {
+  ifstream file(filePath, std::ios::binary | std::ios::in);
+  if (!file.is_open())
+    return -1;
+
+  /* 适当调整，读取一个17M的文件要花近1分钟 */
+  const int readBufSize = 1024;
+  /* 适当调整，读取一个17M的文件要花近1秒 */
+  // const int readBufSize = 1024 * 1024;
+  bool isRead = false;
+
+  uint8_t *fileBuffer = new uint8_t[readBufSize];
+  while (!isRead) {
+    file.read(reinterpret_cast<char *>(fileBuffer), readBufSize);
+    if (file.gcount() != 0) {
+      uint8_t *const tmp = new uint8_t[bufSize + file.gcount()];
+      memcpy(tmp, buf, bufSize);
+      memcpy(tmp + bufSize, fileBuffer, file.gcount());
+      if (buf) {
+        delete[] buf;
+        buf = nullptr;
+      }
+      buf = tmp;
+      bufSize += file.gcount();
+    } else
+      isRead = true;
+  }
+  delete[] fileBuffer;
+  fileBuffer = nullptr;
+  file.close();
+  if (buf == nullptr || bufSize <= 0)
+    return -1;
+
+  if (!file.eof() && file.fail())
+    return -2;
   return 0;
 }

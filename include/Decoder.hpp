@@ -25,7 +25,6 @@ class Decoder {
 
  private:
   string _filePath;
-  ifstream _file;
   uint8_t *_buf = nullptr;
   int _bufSize = 0;
   vector<MCU> _MCU;
@@ -42,7 +41,6 @@ class Decoder {
   const int HT_AC = 1;
   const int HT_Y = 0;
   const int HT_CbCr = 1;
-  int readFile();
   inline int16_t decodeVLI(const string &value);
   inline int erasePaddingBytes(string &scanData);
 };
