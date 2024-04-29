@@ -7,7 +7,7 @@ int main() {
   string inputFileName = "./lenna.yuv";
   string outputFileName = "./demo.jpg";
 
-  // inputFileName = "./lenna.jpg";
+  // inputFileName = "./demo.jpg";
   // outputFileName = "./demo";
 
   int ret = -1;

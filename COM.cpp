@@ -17,13 +17,16 @@ int mark::COM::parse(int index, uint8_t *buf, int bufSize) {
 }
 
 int mark::COM::package(ofstream &outputFile) {
-  const char *comment = "From the JEPGer encode - Yangdatong.";
+  // const char *comment = "From the JEPGer encode - Yangdatong.";
+  const char *comment = "This image was downloaded from WIkipedia and edited "
+                        "using GIMP";
   const uint16_t commentLen = strlen(comment);
-  header.len = htons(commentLen - 2);
+  header.len = htons(commentLen + 2);
 
   uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));
   outputFile.write((const char *)tmp, sizeof(header));
+
   outputFile.write(comment, commentLen);
   return 0;
 };

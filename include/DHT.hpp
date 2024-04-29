@@ -40,8 +40,10 @@ class DHT : public Marker {
 
  private:
   void printHuffmanTable(const HuffmanTable &hf);
-  int buildLumaTable(int coefficientType, ofstream &outputFile);
-  int buildChromaTable(int coefficientType, ofstream &outputFile);
+  /* TODO YangJing 修改为uint8_t 睡觉了 <24-04-29 13:03:27> */
+  int buildLumaTable(uint8_t coefficientType, uint8_t id, ofstream &outputFile);
+  int buildChromaTable(uint8_t coefficientType, uint8_t id,
+                       ofstream &outputFile);
 };
 } // namespace mark
 #endif /* end of include guard: DHT_HPP_GENU2LNE */

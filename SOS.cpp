@@ -1,4 +1,5 @@
 #include "SOS.hpp"
+#include <cstdint>
 
 int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
@@ -66,9 +67,14 @@ int mark::SOS::package(ofstream &outputFile) {
 
   header.imageComponentCount = 3;
 
+  uint8_t entropyCodingTableDestinationSelectorDC[SCAN_COMPONENT] = {0, 1, 1};
+  uint8_t entropyCodingTableDestinationSelectorAC[SCAN_COMPONENT] = {0, 1, 1};
+
   for (int i = 0; i < SCAN_COMPONENT; i++) {
-    header.scanComponent[i].scanComponentSelector = 0;
-    header.scanComponent[i].TdTa = 0b0000'0000;
+    header.scanComponent[i].scanComponentSelector = i + 1;
+    header.scanComponent[i].TdTa = entropyCodingTableDestinationSelectorDC[i];
+    header.scanComponent[i].TdTa <<= 4;
+    header.scanComponent[i].TdTa |= entropyCodingTableDestinationSelectorAC[i];
   }
 
   header.startOfSpectral = 0;
