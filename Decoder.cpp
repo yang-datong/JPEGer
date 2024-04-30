@@ -100,8 +100,7 @@ int Decoder::decodeScanData() {
   int index = 0;
   for (int i = 0; i < MCUCount; i++) {
     /* 1.设置游程编码数组（RLE）：每个MCU可能多个组件的数据（Y,U,V）*/
-    array<vector<int>, 3> RLE;
-
+    RLE rle;
     /*解码DC/AC系数：DCT变换后将矩阵的能量压缩到第一个元素中，左上角第一个元素被称为直流（DC）系数，其余的元素被称为交流（AC）系数*/
     for (int imageComponent = 0; imageComponent < imageComponentCount;
          imageComponent++) {
@@ -128,9 +127,9 @@ int Decoder::decodeScanData() {
             index += lengthVLI;
           }
           /* 零的游程 */
-          RLE[imageComponent].push_back(zeroCount);
+          rle[imageComponent].push_back(zeroCount);
           /* DC系数 */
-          RLE[imageComponent].push_back(coeffDC);
+          rle[imageComponent].push_back(coeffDC);
           bitsScanned.clear();
           break;
         }
@@ -158,9 +157,9 @@ int Decoder::decodeScanData() {
 
           bitsScanned.clear();
           /* 零的游程 */
-          RLE[imageComponent].push_back(zeroCount);
+          rle[imageComponent].push_back(zeroCount);
           /* DC系数 */
-          RLE[imageComponent].push_back(coeffAC);
+          rle[imageComponent].push_back(coeffAC);
 
           if (value == "EOB")
             break;
@@ -168,15 +167,15 @@ int Decoder::decodeScanData() {
       }
 
       /*3.处理边界情况：解码后，如果一个宏块的系数列表只有两个零（表示该宏块完全被压缩为0），则移除，因为该宏块实际上不包含任何信息。*/
-      if (RLE[imageComponent].size() == 2 && RLE[imageComponent][0] == 0 &&
-          RLE[imageComponent][1] == 0) {
-        RLE[imageComponent].pop_back();
-        RLE[imageComponent].pop_back();
+      if (rle[imageComponent].size() == 2 && rle[imageComponent][0] == 0 &&
+          rle[imageComponent][1] == 0) {
+        rle[imageComponent].pop_back();
+        rle[imageComponent].pop_back();
       }
     }
 
     /*6.构建MCU块并添加到数组：输入流的每个MCU部分都被解码成含有直流和交流系数的RLE数组。然后使用RLE数据和量化表（m_QTables），构建出每个MCU的8x8矩阵，并将这个MCU添加到m_MCU数组中以保存解码数据。*/
-    _MCU.push_back(MCU(RLE, quantizationTables));
+    _MCU.push_back(MCU(rle, quantizationTables));
   }
   return 0;
 }
@@ -221,7 +220,7 @@ int Decoder::createImage(const string ouputFileName) {
  * 2.如果首个元素非0,则该二进制字符串就是一个完整的二进制数（因为没有在前面补0的操作）
  * 3.如果是负数则去除前面的所有0字符，再按位取反，乘上-1得到原来的负数
  * */
-inline int16_t Decoder::decodeVLI(const string &value) {
+int16_t Decoder::decodeVLI(const string &value) {
   if (value.empty())
     return 0;
   int sign = value[0] == '0' ? -1 : 1;

@@ -7,8 +7,8 @@
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
-MCU::MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables)
-    : _RLE(RLE), _qtTables(qTables) {
+MCU::MCU(RLE rle, const vector<QuantizationTable> &qTables)
+    : _rle(rle), _qtTables(qTables) {
   _MCUCount++;
   _order = _MCUCount;
 
@@ -35,7 +35,7 @@ void MCU::encodeACandDC() {
     _zzOrder = {0};
     matrixToArrayUseZigZag(_matrix[imageComponent], _zzOrder);
     int qtIndex = imageComponent == 0 ? 0 : 1;
-    for (int i = 0; i < MCU_UNIT_SIZE; ++i) {
+    for (int i = 0; i < MCU_UNIT_SIZE; i++) {
       if (_qtTables[qtIndex][i] == 0) {
         std::cerr << "\033[31mFail _qtTables[qtIndex][i] == 0 \033[0m"
                   << std::endl;
@@ -43,7 +43,23 @@ void MCU::encodeACandDC() {
       }
       _zzOrder[i] /= _qtTables[qtIndex][i];
     }
-    /* TODO YangJing DC,AC系数编码 <24-04-30 17:08:50> */
+    // DC
+    int16_t &DC = _zzOrder[0];
+    DC -= _DCDiff[imageComponent];
+    _DCDiff[imageComponent] = DC;
+    // AC
+    int zoreCount = 0;
+    for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
+      int16_t AC = _zzOrder[indexAC];
+      /* 如果最后剩了5个0,则表示为(4,0) */
+      if (AC == 0 && indexAC != MCU_UNIT_SIZE)
+        zoreCount++;
+      else {
+        _rle[imageComponent].push_back(zoreCount);
+        _rle[imageComponent].push_back(AC);
+        zoreCount = 0;
+      }
+    }
   }
 }
 
@@ -52,17 +68,20 @@ void MCU::decodeACandDC() {
     _zzOrder = {0};
     /* 经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
 
-    /*1. 对AC系数进行RLC解码 */
-    int indexAC = -1; // AC系数（非第一个系数）
-    for (int i = 0; i <= (int)_RLE[imageComponent].size() - 2; i += 2) {
+    /*1. 对DC,AC系数进行RLC解码 */
+    int index = 0;
+    // 注意index的取值范围是0-64，也就是说DC,AC系数（非第一个系数）都在这里解码得到。
+    for (int i = 0; i <= (int)_rle[imageComponent].size() - 2; i += 2) {
       /* RLE编码是成对的：第一个值表示0的数量，第二个值是非零值。如果一对值是（0,0），表示这一行程长度编码结束*/
-      if (_RLE[imageComponent][i] == 0 && _RLE[imageComponent][i + 1] == 0)
+      if (_rle[imageComponent][i] == 0 && _rle[imageComponent][i + 1] == 0)
         break;
-      indexAC += _RLE[imageComponent][i] + 1;
-      _zzOrder[indexAC] = _RLE[imageComponent][i + 1];
+      index += _rle[imageComponent][i];
+      //这里是零的个数，也就意味着其值也为0，由于_zzOrder这里初始化为0,故可以直接跳过赋值0的操作
+      _zzOrder[index] = _rle[imageComponent][i + 1];
+      index++;
     }
 
-    /*2. 对DC系数进行差分解码*/
+    /*2. 对DC系数进行差分解码：除了Y,U,V的第一个是正常值外，后面的值都是差数值*/
     int16_t &DC = _zzOrder[0]; // DC系数（第一个系数，代表块的平均值）
     _DCDiff[imageComponent] += DC;
     DC = _DCDiff[imageComponent];
@@ -70,7 +89,7 @@ void MCU::decodeACandDC() {
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
     int qtIndex = imageComponent == 0 ? 0 : 1;
-    for (int i = 0; i < MCU_UNIT_SIZE; ++i)
+    for (int i = 0; i < MCU_UNIT_SIZE; i++)
       _zzOrder[i] *= _qtTables[qtIndex][i];
 
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
@@ -80,12 +99,11 @@ void MCU::decodeACandDC() {
 }
 
 inline void MCU::startDCT() {
+  float sum = 0.0, Cu = 0.0, Cv = 0.0;
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    float sum = 0.0;
-
     for (int v = 0; v < COMPONENT_SIZE; ++v) {
       for (int u = 0; u < COMPONENT_SIZE; ++u) {
-
+        sum = 0;
         for (int i = 0; i < COMPONENT_SIZE; ++i) {
           for (int j = 0; j < COMPONENT_SIZE; ++j) {
             sum += _dctCoeffs[imageComponent][i][j] *
@@ -94,8 +112,8 @@ inline void MCU::startDCT() {
           }
         }
 
-        float Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
-        float Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+        Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
+        Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
         _matrix[imageComponent][u][v] = (Cu * Cv) / 4.0 * sum;
       }
     }
@@ -103,15 +121,15 @@ inline void MCU::startDCT() {
 }
 
 inline void MCU::startIDCT() {
+  float sum = 0.0, Cu = 0.0, Cv = 0.0;
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int j = 0; j < COMPONENT_SIZE; ++j) {
       for (int i = 0; i < COMPONENT_SIZE; ++i) {
-        float sum = 0.0;
-
+        sum = 0.0;
         for (int u = 0; u < COMPONENT_SIZE; ++u) {
           for (int v = 0; v < COMPONENT_SIZE; ++v) {
-            float Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
-            float Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+            Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
+            Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
 
             sum += Cu * Cv * _matrix[imageComponent][u][v] *
                    cos((2 * i + 1) * u * M_PI / 16.0) *

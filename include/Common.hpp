@@ -47,6 +47,13 @@ inline void printMatrix(
   }
 }
 
+inline string eraseHeightOfZero(string &binaryString) {
+  auto loc = binaryString.find('1');
+  if (loc != string::npos)
+    return binaryString.substr(loc);
+  return "";
+}
+
 template <typename T>
 int arrayToMatrixUseZigZag(
     const array<T, MCU_UNIT_SIZE> a,

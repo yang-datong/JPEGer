@@ -13,9 +13,9 @@ class MCU {
   UCompMatrices _Umatrix;
   IDCTCoeffs _idctCoeffs;
   DCTCoeffs _dctCoeffs;
+  RLE _rle;
 
   int _order = 0;
-  array<vector<int>, 3> _RLE;
   const vector<QuantizationTable> _qtTables;
 
   /* 编码时：经过了中心化操作后的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
@@ -24,7 +24,7 @@ class MCU {
 
  public:
   MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables);
-  MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables);
+  MCU(RLE rle, const vector<QuantizationTable> &qTables);
 
  private:
   void encodeACandDC();
@@ -38,5 +38,6 @@ class MCU {
  public:
   /* 将反中心化的解码矩阵提供给外界创建图片等操作 */
   const UCompMatrices &getAllMatrices() const { return _Umatrix; }
+  const RLE &getAllRLE() const { return _rle; }
 };
 #endif /* end of include guard: MCU_HPP_MJKLNXG9 */

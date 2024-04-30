@@ -74,6 +74,9 @@ typedef array<array<array<float, 8>, 8>, 3> IDCTCoeffs;
 /* 3个二维DCT系数 */
 typedef array<array<array<float, 8>, 8>, 3> DCTCoeffs;
 
+/* 游程编码集合 */
+typedef array<vector<int>, 3> RLE;
+
 /* 量化表 */
 const uint8_t LumaTable[COMPONENT_SIZE][COMPONENT_SIZE] = {
     {16, 11, 10, 16, 24, 40, 51, 61},     {12, 12, 14, 19, 26, 58, 60, 55},

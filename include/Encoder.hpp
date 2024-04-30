@@ -46,7 +46,7 @@ class Encoder {
   const int HT_Y = 0;
   const int HT_CbCr = 1;
   int readFile();
-  inline int16_t encodeVLI(const string &value);
+  string VLIEncode(int value);
   inline int fillPaddingBytes(string &scanData);
 };
 

@@ -41,7 +41,7 @@ class Decoder {
   const int HT_AC = 1;
   const int HT_Y = 0;
   const int HT_CbCr = 1;
-  inline int16_t decodeVLI(const string &value);
+  int16_t decodeVLI(const string &value);
   inline int erasePaddingBytes(string &scanData);
 };
 

@@ -3,6 +3,7 @@
 #include "Common.hpp"
 #include "Image.hpp"
 #include "MCU.hpp"
+#include "Type.hpp"
 #include <cstdint>
 #include <fstream>
 #include <ios>
@@ -73,6 +74,8 @@ int Encoder::startMakeMarker() {
 
   int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
   int index = 0;
+  string scanData;
+
   for (int i = 0; i < MCUCount; i++) {
     UCompMatrices matrix;
     for (int y = 0; y < 8; y++) {
@@ -92,7 +95,25 @@ int Encoder::startMakeMarker() {
                 << std::endl;
       return -1;
     }
-    _MCU.push_back(MCU(matrix, quantizationTables));
+    //_MCU.push_back(MCU(matrix, quantizationTables));
+    MCU mcu(matrix, quantizationTables);
+    RLE rle = mcu.getAllRLE();
+
+    for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+      if (rle[imageComponent].size() == 0) {
+      } else {
+        for (int i = 0; i <= rle[imageComponent].size() - 2; i += 2) {
+          int zeroCount = rle[imageComponent][i];
+          string zeros(zeroCount, '0');
+          string coeffDC = VLIEncode(rle[imageComponent][i + 1]);
+          scanData.append(zeros).append(coeffDC);
+          /* TODO YangJing Huffman编码 <24-05-01 00:18:03> */
+        }
+      }
+    }
+    std::cout << "scanData:" << scanData << std::endl;
+    exit(0);
+    /* TODO YangJing  <24-05-01 00:18:07> */
   }
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
@@ -102,4 +123,34 @@ int Encoder::startMakeMarker() {
   bufferSize = 0;
   outputFile.close();
   return 0;
+}
+
+/* VLI编码：
+ * 1. 计算绝对值的二进制表示。
+ * 2. 绝对值二进制表示中的位数决定编码的长度字段。
+ * 3. 对于正数，直接使用其绝对值的二进制表示作为编码的剩余部分。
+ * 4. 对于负数，采用其绝对值二进制表示的反码（所有1变为0，所有0变为1）。
+ * */
+string Encoder::VLIEncode(int value) {
+  if (value == 0)
+    return "-1";
+  /* 这里有种特殊情况，如果数值为0则直接返回-1,因为-1解码会得到0（如果按照正常编码0编码后还是0）*/
+
+  /* 确定这个二进制表示占用的位数,即编码后的总长度（使用绝对值） */
+  string binaryValue = bitset<16>(abs(value)).to_string();
+  binaryValue = eraseHeightOfZero(binaryValue);
+  int binaryValueLen = binaryValue.size();
+
+  /* 判断原数据的正负性，如果是负数需要采用补码形式 */
+  if (value < 0)
+    for (int i = 0; i < (int)binaryValue.size(); i++)
+      /* 二进制补码形式：按位取反 */
+      binaryValue[i] = binaryValue[i] == '0' ? '1' : '0';
+
+  binaryValue = eraseHeightOfZero(binaryValue);
+
+  for (int i = (int)binaryValue.size(); i < binaryValueLen; i++)
+    binaryValue.insert(0, "0");
+
+  return binaryValue;
 }
