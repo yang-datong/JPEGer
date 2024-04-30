@@ -2,6 +2,7 @@
 #define COMMON_HPP_S7ZCNIWC
 
 #include "Type.hpp"
+#include <cstdint>
 
 #define SAFE_DELETE(p)                                                         \
   do {                                                                         \
@@ -46,12 +47,18 @@ printMatrix(const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> matrix) {
   }
 }
 
+/* TODO YangJing 这里有点混乱，我认为应该都使用uint8_t <24-04-30 16:07:41> */
 int arrayToMatrixUseZigZag(
     const array<int, MCU_UNIT_SIZE> arr,
     array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix);
 
 int matrixToArrayUseZigZag(const uint8_t matrix[COMPONENT_SIZE][COMPONENT_SIZE],
                            uint8_t arr[MCU_UNIT_SIZE]);
+
+int matrixToArrayUseZigZag(
+    const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix,
+    array<int, MCU_UNIT_SIZE> &arr);
+/* TODO YangJing 这里有点混乱，我认为应该都使用uint8_t <24-04-30 16:07:41> */
 
 inline string getFileType(string &fileName) {
   return fileName.substr(fileName.find_last_of('.') + 1);

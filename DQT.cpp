@@ -67,6 +67,7 @@ int mark::DQT::package(ofstream &outputFile) {
   int ret = -1;
   ret |= buildDQTable(0, LumaTable, outputFile);
   ret |= buildDQTable(1, ChromaTable, outputFile);
+  /* YangJing 这里不能乱序，必须是0,然后是1 <24-04-30 17:00:23> */
   if (ret)
     return -1;
   return 0;
@@ -96,6 +97,10 @@ int mark::DQT::buildDQTable(
     }
   }
   matrixToArrayUseZigZag(matrix, header.element);
+  /* TODO YangJing 这里为什么会是uint16_t??? <24-04-30 17:00:40> */
+  vector<uint16_t> vec(begin(header.element), end(header.element));
+  _quantizationTables.push_back({}); /* 先申请空间 */
+  _quantizationTables[id] = vec;
 
   uint8_t tmp[sizeof(header)] = {0};
   memcpy(tmp, &header, sizeof(header));

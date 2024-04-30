@@ -7,17 +7,43 @@
 int MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
-MCU::MCU(array<vector<int>, 3> RLE, vector<vector<uint16_t>> qTables)
+MCU::MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables)
     : _RLE(RLE), _qtTables(qTables) {
   _MCUCount++;
   _order = _MCUCount;
 
   decodeACandDC();
   startIDCT();
-  /* 还原数值范围[0,255] -> [-128,127] */
   performLevelShift();
   if (Image::sOutputFileType != FileFormat::YUV)
     YUVToRGB();
+}
+
+MCU::MCU(CompMatrices &matrix, const vector<QuantizationTable> &qTables)
+    : _matrix(matrix), _qtTables(qTables) {
+  _MCUCount++;
+  _order = _MCUCount;
+
+  levelShift();
+  startDCT();
+  encodeACandDC();
+}
+
+void MCU::encodeACandDC() {
+  for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+    array<int, MCU_UNIT_SIZE> zzOrder = {0};
+    matrixToArrayUseZigZag(_matrix[imageComponent], zzOrder);
+    int qtIndex = imageComponent == 0 ? 0 : 1;
+    for (auto i = 0; i < MCU_UNIT_SIZE; ++i) {
+      if (_qtTables[qtIndex][i] == 0) {
+        std::cerr << "\033[31mFail _qtTables[qtIndex][i] == 0 \033[0m"
+                  << std::endl;
+        return;
+      }
+      zzOrder[i] /= _qtTables[qtIndex][i];
+    }
+    /* TODO YangJing DC,AC系数编码 <24-04-30 17:08:50> */
+  }
 }
 
 void MCU::decodeACandDC() {
@@ -61,7 +87,7 @@ inline void MCU::startDCT() {
 
         for (int i = 0; i < COMPONENT_SIZE; ++i) {
           for (int j = 0; j < COMPONENT_SIZE; ++j) {
-            sum += _matrix[imageComponent][i][j] *
+            sum += _dctCoeffs[imageComponent][i][j] *
                    cos((2 * i + 1) * u * M_PI / 16) *
                    cos((2 * j + 1) * v * M_PI / 16);
           }
@@ -69,7 +95,7 @@ inline void MCU::startDCT() {
 
         float Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
         float Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
-        _dctCoeffs[imageComponent][u][v] = (Cu * Cv) / 4.0 * sum;
+        _matrix[imageComponent][u][v] = (Cu * Cv) / 4.0 * sum;
       }
     }
   }
@@ -96,6 +122,15 @@ inline void MCU::startIDCT() {
       }
     }
   }
+}
+
+/* 中心化*/
+inline void MCU::levelShift() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    for (int y = 0; y < COMPONENT_SIZE; ++y)
+      for (int x = 0; x < COMPONENT_SIZE; ++x)
+        /* TODO YangJing 这要用128.0? <24-04-30 16:17:19> */
+        _dctCoeffs[imageComponent][y][x] = _matrix[imageComponent][y][x] - 128;
 }
 
 /* 反中心化（反级别移位）*/

@@ -55,6 +55,7 @@ typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
     HuffmanTable;
 
 /* 量化表 */
+/* TODO YangJing 为什么会是uint16_t ??? <24-04-30 16:58:54> */
 typedef vector<uint16_t> QuantizationTable;
 
 /* 3个二维矩阵(Y,U,V) */
