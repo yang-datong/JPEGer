@@ -52,14 +52,14 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
 
 /* 这个函数不参与实际的解码(Option) */
 void mark::DQT::printQuantizationTable(QuantizationTable quantizationTable) {
-  int arr[QUANTIZATION_TAB_SIZE] = {0};
+  int tmp[QUANTIZATION_TAB_SIZE] = {0};
   for (int i = 0; i < QUANTIZATION_TAB_SIZE; i++)
-    arr[i] = quantizationTable[i];
+    tmp[i] = quantizationTable[i];
 
-  array<int, MCU_UNIT_SIZE> a;
-  copy(arr, arr + QUANTIZATION_TAB_SIZE, a.begin());
-  array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> matrix;
-  arrayToMatrixUseZigZag(a, matrix);
+  array<uint8_t, MCU_UNIT_SIZE> arr;
+  copy(tmp, tmp + QUANTIZATION_TAB_SIZE, arr.begin());
+  array<array<uint8_t, COMPONENT_SIZE>, COMPONENT_SIZE> matrix;
+  arrayToMatrixUseZigZag(arr, matrix);
   printMatrix(matrix);
 }
 

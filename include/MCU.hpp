@@ -7,9 +7,10 @@
 class MCU {
  private:
   static int _MCUCount;
-  static int _DCDiff[3];
+  static int16_t _DCDiff[3];
 
   CompMatrices _matrix;
+  UCompMatrices _Umatrix;
   IDCTCoeffs _idctCoeffs;
   DCTCoeffs _dctCoeffs;
 
@@ -17,8 +18,12 @@ class MCU {
   array<vector<int>, 3> _RLE;
   const vector<QuantizationTable> _qtTables;
 
+  /* 编码时：经过了中心化操作后的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
+  array<int16_t, MCU_UNIT_SIZE> _zzOrder = {0};
+  /* 解码时：经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
+
  public:
-  MCU(CompMatrices &matrix, const vector<QuantizationTable> &qTables);
+  MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables);
   MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables);
 
  private:
@@ -31,6 +36,7 @@ class MCU {
   inline void YUVToRGB();
 
  public:
-  const CompMatrices &getAllMatrices() const { return _matrix; }
+  /* 将反中心化的解码矩阵提供给外界创建图片等操作 */
+  const UCompMatrices &getAllMatrices() const { return _Umatrix; }
 };
 #endif /* end of include guard: MCU_HPP_MJKLNXG9 */

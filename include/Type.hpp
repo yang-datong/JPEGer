@@ -58,8 +58,14 @@ typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
 /* TODO YangJing 为什么会是uint16_t ??? <24-04-30 16:58:54> */
 typedef vector<uint16_t> QuantizationTable;
 
-/* 3个二维矩阵(Y,U,V) */
-typedef array<array<array<int, 8>, 8>, 3> CompMatrices;
+/* 3个二维矩阵(Y,U,V)，分量均为正数0-255
+ * （不要用int存，那样的话空间复杂度是指数级别增长的） */
+/* TODO YangJing 不知道为什么用uint8_t与int8_t出来的图像有问题，先用16吧
+ * <24-04-30 18:38:34> */
+typedef array<array<array<uint16_t, 8>, 8>, 3> UCompMatrices;
+
+/* 3个二维矩阵(Y,U,V)，分量可为负数-125-124 */
+typedef array<array<array<int16_t, 8>, 8>, 3> CompMatrices;
 
 /* 3个二维逆DCT系数 */
 typedef array<array<array<float, 8>, 8>, 3> IDCTCoeffs;

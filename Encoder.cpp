@@ -75,7 +75,7 @@ int Encoder::startMakeMarker() {
   int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
   int index = 0;
   for (int i = 0; i < MCUCount; i++) {
-    CompMatrices matrix;
+    UCompMatrices matrix;
     for (int y = 0; y < 8; y++) {
       for (int x = 0; x < 8; x++) {
         matrix[0][y][x] = bufferY[index];

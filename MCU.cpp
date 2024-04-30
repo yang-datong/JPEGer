@@ -4,7 +4,7 @@
 #include "Type.hpp"
 #include <cstdint>
 
-int MCU::_DCDiff[3] = {0, 0, 0};
+int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
 MCU::MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables)
@@ -19,8 +19,9 @@ MCU::MCU(array<vector<int>, 3> RLE, const vector<QuantizationTable> &qTables)
     YUVToRGB();
 }
 
-MCU::MCU(CompMatrices &matrix, const vector<QuantizationTable> &qTables)
-    : _matrix(matrix), _qtTables(qTables) {
+/* 提供进来编码的宏块应该是原始状态的，不应该包含负数像素值 */
+MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
+    : _Umatrix(matrix), _qtTables(qTables) {
   _MCUCount++;
   _order = _MCUCount;
 
@@ -31,16 +32,16 @@ MCU::MCU(CompMatrices &matrix, const vector<QuantizationTable> &qTables)
 
 void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
-    array<int, MCU_UNIT_SIZE> zzOrder = {0};
-    matrixToArrayUseZigZag(_matrix[imageComponent], zzOrder);
+    _zzOrder = {0};
+    matrixToArrayUseZigZag(_matrix[imageComponent], _zzOrder);
     int qtIndex = imageComponent == 0 ? 0 : 1;
-    for (auto i = 0; i < MCU_UNIT_SIZE; ++i) {
+    for (int i = 0; i < MCU_UNIT_SIZE; ++i) {
       if (_qtTables[qtIndex][i] == 0) {
         std::cerr << "\033[31mFail _qtTables[qtIndex][i] == 0 \033[0m"
                   << std::endl;
         return;
       }
-      zzOrder[i] /= _qtTables[qtIndex][i];
+      _zzOrder[i] /= _qtTables[qtIndex][i];
     }
     /* TODO YangJing DC,AC系数编码 <24-04-30 17:08:50> */
   }
@@ -48,7 +49,8 @@ void MCU::encodeACandDC() {
 
 void MCU::decodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
-    array<int, MCU_UNIT_SIZE> zzOrder = {0};
+    _zzOrder = {0};
+    /* 经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
 
     /*1. 对AC系数进行RLC解码 */
     int indexAC = -1; // AC系数（非第一个系数）
@@ -57,23 +59,23 @@ void MCU::decodeACandDC() {
       if (_RLE[imageComponent][i] == 0 && _RLE[imageComponent][i + 1] == 0)
         break;
       indexAC += _RLE[imageComponent][i] + 1;
-      zzOrder[indexAC] = _RLE[imageComponent][i + 1];
+      _zzOrder[indexAC] = _RLE[imageComponent][i + 1];
     }
 
     /*2. 对DC系数进行差分解码*/
     /* TODO YangJing 这里用int应该有问题，应该是uint8_t <24-04-29 20:33:35> */
-    int &DC = zzOrder[0]; // DC系数（第一个系数，代表块的平均值）
+    int16_t &DC = _zzOrder[0]; // DC系数（第一个系数，代表块的平均值）
     _DCDiff[imageComponent] += DC;
     DC = _DCDiff[imageComponent];
     //第一次将zzOrder0的值与前一个DC系数的差分值相加*/
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
     int qtIndex = imageComponent == 0 ? 0 : 1;
-    for (auto i = 0; i < MCU_UNIT_SIZE; ++i)
-      zzOrder[i] *= _qtTables[qtIndex][i];
+    for (int i = 0; i < MCU_UNIT_SIZE; ++i)
+      _zzOrder[i] *= _qtTables[qtIndex][i];
 
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
-    arrayToMatrixUseZigZag(zzOrder, _matrix[imageComponent]);
+    arrayToMatrixUseZigZag(_zzOrder, _matrix[imageComponent]);
     // printMatrix(_matrix[imageComponent]);
   }
 }
@@ -129,8 +131,7 @@ inline void MCU::levelShift() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
-        /* TODO YangJing 这要用128.0? <24-04-30 16:17:19> */
-        _dctCoeffs[imageComponent][y][x] = _matrix[imageComponent][y][x] - 128;
+        _dctCoeffs[imageComponent][y][x] = _Umatrix[imageComponent][y][x] - 128;
 }
 
 /* 反中心化（反级别移位）*/
@@ -138,7 +139,7 @@ inline void MCU::performLevelShift() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
-        _matrix[imageComponent][y][x] =
+        _Umatrix[imageComponent][y][x] =
             roundl(_idctCoeffs[imageComponent][y][x]) + 128;
   // 1. 使用 roundl 函数对IDCT变换后的系数进行四舍五入到最近的整数。
   // 2. 向每个四舍五入后的系数加上128，以执行反中心化处理。
@@ -148,9 +149,9 @@ inline void MCU::YUVToRGB() {
   /* YUV444 packed 表示为三个字节一个像素，而矩阵是8x8个像素，故有8x8x3个字节*/
   for (int y = 0; y < COMPONENT_SIZE; ++y) {
     for (int x = 0; x < COMPONENT_SIZE; ++x) {
-      float Y = _matrix[0][y][x];
-      float Cb = _matrix[1][y][x];
-      float Cr = _matrix[2][y][x];
+      float Y = _Umatrix[0][y][x];
+      float Cb = _Umatrix[1][y][x];
+      float Cr = _Umatrix[2][y][x];
 
       int R = (int)floor(Y + 1.402 * (1.0 * Cr - 128));
       int G = (int)floor(Y - 0.34414 * (1.0 * Cb - 128) -
@@ -161,9 +162,9 @@ inline void MCU::YUVToRGB() {
       G = max(0, min(G, 255));
       B = max(0, min(B, 255));
 
-      _matrix[0][y][x] = R;
-      _matrix[1][y][x] = G;
-      _matrix[2][y][x] = B;
+      _Umatrix[0][y][x] = R;
+      _Umatrix[1][y][x] = G;
+      _Umatrix[2][y][x] = B;
     }
   }
 }
