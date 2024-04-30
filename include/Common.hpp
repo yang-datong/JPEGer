@@ -48,19 +48,24 @@ printMatrix(const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> matrix) {
 }
 
 /* TODO YangJing 这里有点混乱，我认为应该都使用uint8_t <24-04-30 16:07:41> */
+template <typename T>
 int arrayToMatrixUseZigZag(
-    const array<int, MCU_UNIT_SIZE> arr,
-    array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix);
+    const array<T, MCU_UNIT_SIZE> a,
+    array<array<T, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix);
 
-int matrixToArrayUseZigZag(const uint8_t matrix[COMPONENT_SIZE][COMPONENT_SIZE],
-                           uint8_t arr[MCU_UNIT_SIZE]);
-
+template <typename T>
+int matrixToArrayUseZigZag(const T matrix[COMPONENT_SIZE][COMPONENT_SIZE],
+                           T arr[MCU_UNIT_SIZE]);
+template <typename T>
 int matrixToArrayUseZigZag(
-    const array<array<int, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix,
-    array<int, MCU_UNIT_SIZE> &arr);
+    const array<array<T, COMPONENT_SIZE>, COMPONENT_SIZE> &matrix,
+    array<T, MCU_UNIT_SIZE> &arr);
 /* TODO YangJing 这里有点混乱，我认为应该都使用uint8_t <24-04-30 16:07:41> */
 
 inline string getFileType(string &fileName) {
   return fileName.substr(fileName.find_last_of('.') + 1);
 }
+
+#include "Common.tpp"
+
 #endif /* end of include guard: COMMON_HPP_S7ZCNIWC */
