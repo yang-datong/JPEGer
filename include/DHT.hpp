@@ -6,8 +6,6 @@
 #include "Type.hpp"
 
 namespace mark {
-/* 这里源文件设计的东西比较多，需要严谨的处理下，我眼睛好困啊，洗澡睡觉去了 TODO
- * <24-04-28 00:04:16, YangJing>  */
 typedef struct __attribute__((packed)) _DHT {
   uint8_t DHT[2] = {0xff, JFIF::DHT};
   uint16_t len = 0;

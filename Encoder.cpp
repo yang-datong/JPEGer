@@ -71,7 +71,6 @@ int Encoder::startMakeMarker() {
   uint8_t *bufferU = buffer + WH;
   uint8_t *bufferV = buffer + WH * 2;
 
-  /* TODO YangJing 明天做 <24-04-29 22:26:30> */
   int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
   int index = 0;
   for (int i = 0; i < MCUCount; i++) {
@@ -87,7 +86,6 @@ int Encoder::startMakeMarker() {
 
     vector<QuantizationTable> quantizationTables =
         static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
-    /* TODO YangJing 这里还需要再进一步改进 <24-04-30 17:01:57> */
     if (quantizationTables.size() == 0 || quantizationTables[0].size() == 0 ||
         quantizationTables[1].size() == 0) {
       std::cerr << "\033[31mError -> quantizationTables.size\033[0m"
@@ -96,7 +94,6 @@ int Encoder::startMakeMarker() {
     }
     _MCU.push_back(MCU(matrix, quantizationTables));
   }
-  /* TODO YangJing  <24-04-29 22:24:05> */
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));

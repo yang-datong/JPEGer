@@ -11,7 +11,8 @@ typedef struct __attribute__((packed)) _DQT {
   uint8_t DQT[2] = {0xff, JFIF::DQT};
   uint16_t len = 0;
   uint8_t PqTq = 0;
-  uint8_t element[MCU_UNIT_SIZE] = {0};
+  uint8_t element8[MCU_UNIT_SIZE] = {0};
+  uint16_t element16[MCU_UNIT_SIZE] = {0};
 } DQTHeader;
 
 class DQT : public Marker {

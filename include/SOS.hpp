@@ -4,9 +4,6 @@
 #include "Marker.hpp"
 #include <cstdint>
 
-/* TODO YangJing 需要整理这里 <24-04-28 19:37:55> */
-#define SCAN_COMPONENT 3
-
 namespace mark {
 typedef struct _ScanComponent {
   uint8_t scanComponentSelector = 0;

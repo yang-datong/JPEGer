@@ -91,7 +91,7 @@ int mark::DHT::package(ofstream &outputFile) {
   buildHuffmanTable(1, 1, HuffmanChromaACLenTable, HuffmanChromaACValueTable,
                     outputFile); // UV,AC
 
-  /* TODO YangJing  <24-04-28 21:56:26> */
+  /* TODO 构建Huffman Tree YangJing  <24-04-28 21:56:26> */
   //_huffmanTree[0].buildHuffmanTree();
   return 0;
 };

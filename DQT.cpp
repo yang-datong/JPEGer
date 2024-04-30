@@ -34,13 +34,11 @@ int mark::DQT::parse(int index, uint8_t *buf, int bufSize) {
     for (int k = 0; k < QUANTIZATION_TAB_SIZE; k++) {
       /* element的大小可能是8、16*/
       if (precision == 0) {
-        header.element[k] = bs.readByte();
-        _quantizationTables[identifier].push_back(header.element[k]);
+        header.element8[k] = bs.readByte();
+        _quantizationTables[identifier].push_back(header.element8[k]);
       } else if (precision == 1) {
-        /* TODO*YangJing可能会有问题，这里的字节大小为uint16_t（需要分情况处理，暂时先不做吧，都按1字节处理，其实2字节的情况很少）<24-04-27-16:39:05>*/
-        // header.element[k] = (uint16_t)bs.readByte();
-        header.element[k] = bs.readByte();
-        _quantizationTables[identifier].push_back(header.element[k]);
+        header.element16[k] = bs.readBytes<uint16_t>(2);
+        _quantizationTables[identifier].push_back(header.element16[k]);
       }
     }
     printQuantizationTable(_quantizationTables[identifier]);
@@ -77,7 +75,6 @@ int mark::DQT::buildDQTable(
     const uint8_t id,
     const uint8_t (&componentTab)[COMPONENT_SIZE][COMPONENT_SIZE],
     ofstream &outputFile) {
-  header.len = htons(sizeof(header) - 2);
 
   uint8_t precision = 0; // 8 bit
   // uint8_t precision = 1; //16 bit
@@ -96,14 +93,20 @@ int mark::DQT::buildDQTable(
       matrix[i][j] = tmp;
     }
   }
-  matrixToArrayUseZigZag(matrix, header.element);
-  /* TODO YangJing 这里为什么会是uint16_t??? <24-04-30 17:00:40> */
-  vector<uint16_t> vec(begin(header.element), end(header.element));
-  _quantizationTables.push_back({}); /* 先申请空间 */
-  _quantizationTables[id] = vec;
-
-  uint8_t tmp[sizeof(header)] = {0};
-  memcpy(tmp, &header, sizeof(header));
-  outputFile.write((const char *)tmp, sizeof(header));
+  if (precision == 0) {
+    matrixToArrayUseZigZag(matrix, header.element8);
+    vector<uint16_t> vec(begin(header.element8), end(header.element8));
+    _quantizationTables.push_back({}); /* 先申请空间 */
+    _quantizationTables[id] = vec;
+    int writeSize = (int)(sizeof(header) - sizeof(uint16_t) * MCU_UNIT_SIZE);
+    header.len = htons(writeSize - 2);
+    uint8_t *tmp = new uint8_t[writeSize];
+    memcpy(tmp, &header, writeSize);
+    outputFile.write((const char *)tmp, writeSize);
+    SAFE_DELETE_ARRAY(tmp);
+  } else if (precision == 1) {
+    std::cerr << "\033[31mNo support precision -> 1\033[0m" << std::endl;
+    return -1;
+  }
   return 0;
 }

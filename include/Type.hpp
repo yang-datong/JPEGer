@@ -21,6 +21,7 @@
 
 using namespace std;
 
+#define SCAN_COMPONENT 3
 #define COMPONENT_SIZE 8
 #define MCU_UNIT_SIZE 8 * 8
 /* 量化步长 1-100 差->好*/
@@ -55,7 +56,7 @@ typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
     HuffmanTable;
 
 /* 量化表 */
-/* TODO YangJing 为什么会是uint16_t ??? <24-04-30 16:58:54> */
+/* 这里uint16_t是为了兼容uint8_t，由于uint8_t和uint16_t都有可能，故使用大值 */
 typedef vector<uint16_t> QuantizationTable;
 
 /* 3个二维矩阵(Y,U,V)，分量均为正数0-255

@@ -13,8 +13,7 @@ int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "\timageComponent{" << std::endl;
   for (int i = 0; i < header.imageComponentCount; i++) {
     /* 扫描分量选择器 */
-    /* TODO YangJing
-     * 这里严重有问题：如果header.imageComponentCount不为3则很危险，不过正常情况下都是3，先这样吧
+    /* TODO-YangJing-这里严重有问题：如果header.imageComponentCount不为3则很危险，不过正常情况下都是3，先这样吧
      * <24-04-28 19:41:07> */
     header.scanComponent[i].scanComponentSelector = bs.readByte();
     std::cout << "\t\tscanComponentSelector:"
