@@ -1,5 +1,7 @@
 #include "HuffmanTree.hpp"
 #include "MCU.hpp"
+#include <cstdint>
+#include <functional>
 
 inline NodePtr HuffmanTree::createRootNode(const uint16_t value) {
   NodePtr root = std::make_shared<Node>("", value);
@@ -108,10 +110,42 @@ int HuffmanTree::buildHuffmanTree(HuffmanTable &htable) {
       }
     }
   }
-  //  std::cout << "\t{";
-  //  printHuufmanTree(m_root, "");
-  //  std::cout << "}" << std::endl;
+  // std::cout << "\t{";
+  // printHuufmanTree(_root, "");
+  // std::cout << "}" << std::endl;
   return 0;
+}
+
+const string HuffmanTree::encode(const uint8_t value) {
+  string huffCode;
+  // 用于保存节点的引用，从根节点开始
+  NodePtr node = _root;
+  // 使用一个lambda递归函数进行其本身的搜索
+  std::function<void(NodePtr)> searchEncode = [&](NodePtr currentNode) {
+    // 如果当前节点是空的停止搜索
+    if (!currentNode)
+      return;
+
+    // 如果是叶子节点并且值匹配，那么找到编码并返回
+    if (currentNode->leaf && currentNode->value == value) {
+      huffCode = currentNode->code;
+      return;
+    }
+    // 如果不是叶子节点，递归搜索左右子节点
+    if (currentNode->lChild != nullptr) {
+      searchEncode(currentNode->lChild);
+    }
+    if (!huffCode.empty())
+      return; // 如果找到值则终止搜索
+
+    if (currentNode->rChild != nullptr) {
+      searchEncode(currentNode->rChild);
+    }
+  };
+
+  // 从根开始递归搜索
+  searchEncode(node);
+  return huffCode;
 }
 
 const string HuffmanTree::decode(const string &huffCode) {

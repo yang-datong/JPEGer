@@ -38,9 +38,10 @@ class DHT : public Marker {
 
  private:
   void printHuffmanTable(const HuffmanTable &hf);
-  int buildHuffmanTable(uint8_t coefficientType, uint8_t id,
-                        const uint8_t *_huffmanCodeLens,
-                        const uint8_t *_huffmanCodes, ofstream &outputFile);
+  int buildHuffmanTableAndTree(uint8_t coefficientType, uint8_t id,
+                               const uint8_t *_huffmanCodeLens,
+                               const uint8_t *_huffmanCodes,
+                               ofstream &outputFile);
 };
 } // namespace mark
 #endif /* end of include guard: DHT_HPP_GENU2LNE */

@@ -1,12 +1,4 @@
 #include "Encoder.hpp"
-#include "APP0.hpp"
-#include "Common.hpp"
-#include "Image.hpp"
-#include "MCU.hpp"
-#include "Type.hpp"
-#include <cstdint>
-#include <fstream>
-#include <ios>
 
 Encoder::Encoder(const string &inputFilePath, const string &outputFilePath)
     : _inputFilePath(inputFilePath), _outputFilePath(outputFilePath) {
@@ -76,7 +68,11 @@ int Encoder::startMakeMarker() {
   int index = 0;
   string scanData;
 
+  mark::HuffmanTrees huffmanTree =
+      static_cast<mark::DHT *>(_dht)->getHuffmanTree();
+
   for (int i = 0; i < MCUCount; i++) {
+    int matrixIndex = 0;
     UCompMatrices matrix;
     for (int y = 0; y < 8; y++) {
       for (int x = 0; x < 8; x++) {
@@ -95,26 +91,62 @@ int Encoder::startMakeMarker() {
                 << std::endl;
       return -1;
     }
-    //_MCU.push_back(MCU(matrix, quantizationTables));
     MCU mcu(matrix, quantizationTables);
     RLE rle = mcu.getAllRLE();
 
     for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
-      if (rle[imageComponent].size() == 0) {
-      } else {
-        for (int i = 0; i <= rle[imageComponent].size() - 2; i += 2) {
-          int zeroCount = rle[imageComponent][i];
-          string zeros(zeroCount, '0');
-          string coeffDC = VLIEncode(rle[imageComponent][i + 1]);
-          scanData.append(zeros).append(coeffDC);
-          /* TODO YangJing Huffman编码 <24-05-01 00:18:03> */
+      bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
+      if (rle[imageComponent].size() != 0) {
+        if (matrixIndex == 0) {
+          string coeffDC = VLIEncode(rle[imageComponent][0]);
+          uint8_t coeffDCLen = coeffDC.length();
+          string value = huffmanTree[HT_DC][HuffTableID].encode(coeffDCLen);
+          value += coeffDC;
+          scanData.append(value);
+          /* TODO YangJing 这里的coeffDCLen不应该大于12,感觉错了 <24-05-02
+           * 00:07:01> */
+          //          std::cout << "coeffDCLen:" << (int)coeffDCLen <<
+          //          std::endl;
+        } else {
+          for (int i = 1; i <= (int)rle[imageComponent].size() - 2; i += 2) {
+            uint8_t zeroCount = rle[imageComponent][i];
+            if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
+              break;
+            string coeffAC = VLIEncode(rle[imageComponent][i + 1]);
+            uint8_t coeffACLen = coeffAC.length();
+            uint8_t symbol = zeroCount;
+            /* TODO YangJing 封装半个字节合并操作： <24-05-01 22:42:38> */
+            /*
+             * uint8_t combineRLEandCoeff(uint8_t runLength, uint8_t
+             * coeffLength) { return (runLength << 4) | (coeffLength & 0x0F);
+             * }
+             * */
+            symbol <<= 4;
+            symbol |= coeffACLen;
+            string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
+            if (checkSpace(value)) {
+              ///* T.81 page 153 */
+              // std::cout << "AC -> {" << std::endl;
+              // std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" :
+              // "Chroma")
+              //           << ", Run/Size:" << (int)zeroCount << "/"
+              //           << (int)coeffACLen << ", Code Length:" <<
+              //           value.length()
+              //           << ", Code word:" << value << ", " << (int)symbol
+              //           << " -encode-> " << value << std::endl;
+              // std::cout << "}" << std::endl;
+              scanData.append(value);
+            }
+          }
         }
       }
+      /* TODO YangJing 这个位置不对，不是放在这里 <24-05-02 00:07:58> */
+      matrixIndex++;
     }
-    std::cout << "scanData:" << scanData << std::endl;
-    exit(0);
-    /* TODO YangJing  <24-05-01 00:18:07> */
   }
+  //  std::cout << "scanData:" << scanData << std::endl;
+  //  TODO 有问题 <24-05-01 18:23:32, YangJing>
+  outputFile.write((const char *)scanData.c_str(), scanData.length());
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));

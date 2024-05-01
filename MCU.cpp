@@ -34,7 +34,7 @@ void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     _zzOrder = {0};
     matrixToArrayUseZigZag(_matrix[imageComponent], _zzOrder);
-    int qtIndex = imageComponent == 0 ? 0 : 1;
+    int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
     for (int i = 0; i < MCU_UNIT_SIZE; i++) {
       if (_qtTables[qtIndex][i] == 0) {
         std::cerr << "\033[31mFail _qtTables[qtIndex][i] == 0 \033[0m"
@@ -47,17 +47,21 @@ void MCU::encodeACandDC() {
     int16_t &DC = _zzOrder[0];
     DC -= _DCDiff[imageComponent];
     _DCDiff[imageComponent] = DC;
+    _rle[imageComponent].push_back(DC);
     // AC
-    int zoreCount = 0;
+    int zeroCount = 0;
     for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
       int16_t AC = _zzOrder[indexAC];
       /* 如果最后剩了5个0,则表示为(4,0) */
       if (AC == 0 && indexAC != MCU_UNIT_SIZE)
-        zoreCount++;
-      else {
-        _rle[imageComponent].push_back(zoreCount);
+        zeroCount++;
+      else if (AC == 0 && indexAC == MCU_UNIT_SIZE) {
+        _rle[imageComponent].push_back(0);
+        _rle[imageComponent].push_back(0);
+      } else {
+        _rle[imageComponent].push_back(zeroCount);
         _rle[imageComponent].push_back(AC);
-        zoreCount = 0;
+        zeroCount = 0;
       }
     }
   }
@@ -88,7 +92,7 @@ void MCU::decodeACandDC() {
     //第一次将zzOrder0的值与前一个DC系数的差分值相加*/
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
-    int qtIndex = imageComponent == 0 ? 0 : 1;
+    int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
     for (int i = 0; i < MCU_UNIT_SIZE; i++)
       _zzOrder[i] *= _qtTables[qtIndex][i];
 

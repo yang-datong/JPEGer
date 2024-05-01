@@ -1,6 +1,7 @@
 #include "DHT.hpp"
 #include "Type.hpp"
 #include <cstdint>
+#include <vector>
 
 int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
@@ -81,39 +82,49 @@ void mark::DHT::printHuffmanTable(const HuffmanTable &hf) {
 }
 
 int mark::DHT::package(ofstream &outputFile) {
+  buildHuffmanTableAndTree(HT_DC, HT_Y, HuffmanLumaDCLenTable,
+                           HuffmanLumaDCValueTable,
+                           outputFile); // DC,Y
+  buildHuffmanTableAndTree(HT_AC, HT_Y, HuffmanLumaACLenTable,
+                           HuffmanLumaACValueTable,
+                           outputFile); // AC,Y
 
-  buildHuffmanTable(0, 0, HuffmanLumaDCLenTable, HuffmanLumaDCValueTable,
-                    outputFile); // Y,DC
-  buildHuffmanTable(1, 0, HuffmanLumaACLenTable, HuffmanLumaACValueTable,
-                    outputFile); // Y,AC
-  buildHuffmanTable(0, 1, HuffmanChromaDCLenTable, HuffmanChromaDCValueTable,
-                    outputFile); // UV,DC
-  buildHuffmanTable(1, 1, HuffmanChromaACLenTable, HuffmanChromaACValueTable,
-                    outputFile); // UV,AC
-
-  /* TODO 构建Huffman Tree YangJing  <24-04-28 21:56:26> */
-  //_huffmanTree[0].buildHuffmanTree();
+  buildHuffmanTableAndTree(HT_DC, HT_CbCr, HuffmanChromaDCLenTable,
+                           HuffmanChromaDCValueTable,
+                           outputFile); // DC,UV
+  buildHuffmanTableAndTree(HT_AC, HT_CbCr, HuffmanChromaACLenTable,
+                           HuffmanChromaACValueTable,
+                           outputFile); // AC,UV
   return 0;
 };
 
-int mark::DHT::buildHuffmanTable(uint8_t coefficientType, uint8_t id,
-                                 const uint8_t *_huffmanCodeLens,
-                                 const uint8_t *_huffmanCodes,
-                                 ofstream &outputFile) {
+int mark::DHT::buildHuffmanTableAndTree(uint8_t coefficientType, uint8_t id,
+                                        const uint8_t *buildHuffmanCodeLens,
+                                        const uint8_t *buildHuffmanCodes,
+                                        ofstream &outputFile) {
   uint8_t TcTh = coefficientType; /* DC or AC */
   TcTh <<= 4;
   TcTh |= id;
   header.TcTh = TcTh;
   int totalSymbolCount = 0;
+  int index = 0;
   for (int i = 0; i < HUFFMAN_CODE_LENGTH_POSSIBLE; i++) {
-    header.huffmanCodeLens[i] = _huffmanCodeLens[i];
-    totalSymbolCount += _huffmanCodeLens[i];
+    int len = buildHuffmanCodeLens[i];
+    /* 一份将要写入到JPEG文件中 */
+    header.huffmanCodeLens[i] = len;
+    /* 一份保存到类中，用于构建Huffmen Tree */
+    _huffmanTable[coefficientType][id][i].first = len;
+    for (int j = 0; j < buildHuffmanCodeLens[i]; j++)
+      _huffmanTable[coefficientType][id][i].second.push_back(
+          buildHuffmanCodes[index++]);
+
+    /* 一份用于统计 */
+    totalSymbolCount += len;
   }
 
   uint8_t *huffmanCodes = new uint8_t[totalSymbolCount];
   for (int i = 0; i < totalSymbolCount; i++)
-    huffmanCodes[i] = _huffmanCodes[i];
-
+    huffmanCodes[i] = buildHuffmanCodes[i];
   header.huffmanCodes = huffmanCodes;
 
   /* 减去一个指针大小，加上后面的HuffmanCodes */
@@ -125,5 +136,9 @@ int mark::DHT::buildHuffmanTable(uint8_t coefficientType, uint8_t id,
   // 减去最后的一个指针大小
   outputFile.write((const char *)tmp, sizeof(header) - sizeof(void *));
   outputFile.write((const char *)huffmanCodes, totalSymbolCount);
+
+  /* 构建Huffman Tree用于编码数据 */
+  _huffmanTree[coefficientType][id].buildHuffmanTree(
+      _huffmanTable[coefficientType][id]);
   return 0;
 }

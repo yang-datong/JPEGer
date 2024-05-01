@@ -37,12 +37,31 @@ class Decoder {
   Marker *_sos;
   Image _image;
 
-  const int HT_DC = 0;
-  const int HT_AC = 1;
-  const int HT_Y = 0;
-  const int HT_CbCr = 1;
   int16_t decodeVLI(const string &value);
   inline int erasePaddingBytes(string &scanData);
+
+  inline void printDCCoefficient(int HuffTableID, string value,
+                                 string &bitsScanned) {
+    /* T.81 page 149 */
+    std::cout << "DC -> {" << std::endl;
+    std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" : "Chroma")
+              << ", Category:" << value
+              << ", Code Length:" << bitsScanned.length()
+              << ", Code word:" << bitsScanned << std::endl;
+    std::cout << "}" << std::endl;
+  }
+
+  inline void printACCoefficient(int HuffTableID, string value,
+                                 string &bitsScanned, int zeroCount,
+                                 int lengthVLI) {
+    /* T.81 page 153 */
+    std::cout << "AC -> {" << std::endl;
+    std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" : "Chroma")
+              << ", Category:" << value << ", Run/Size:" << zeroCount << "/"
+              << lengthVLI << ", Code Length:" << bitsScanned.length()
+              << ", Code word:" << bitsScanned << std::endl;
+    std::cout << "}" << std::endl;
+  }
 };
 
 #endif /* end of include guard: DECODER_HPP_4KCLDUFQ */

@@ -3,6 +3,7 @@
 #include "HuffmanTree.hpp"
 #include "Image.hpp"
 #include "Type.hpp"
+#include <bitset>
 #include <cstdint>
 
 Decoder::Decoder(const string &filePath) : _filePath(filePath) {
@@ -106,7 +107,7 @@ int Decoder::decodeScanData() {
          imageComponent++) {
       string bitsScanned;
       /* Y单独Huffman解码表，UV共享一张Huffman解码表 */
-      bool HuffTableID = imageComponent == 0 ? 0 : 1;
+      bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
 
       /* 1.解码直流系数（DC）：对于每个颜色分量（Y,U,V），直流系数表示一个8x8宏块（或MCU）的平均值*/
       while (true) {
@@ -118,6 +119,7 @@ int Decoder::decodeScanData() {
           uint8_t zeroCount = 0;
           int16_t coeffDC = 0;
           if (value != "EOB") {
+            // printDCCoefficient(HuffTableID, value, bitsScanned);
             /* 获取DC系数中 零的游程 */
             zeroCount = uint8_t(stoi(value)) >> 4;
             /* 得到VLI的长度 */
@@ -151,6 +153,8 @@ int Decoder::decodeScanData() {
             uint8_t lengthVLI = uint8_t(stoi(value)) & 0xf;
             /* 再解码VLI编码拿到AC系数 */
             coeffAC = decodeVLI(scanData.substr(index, lengthVLI));
+            // printACCoefficient(HuffTableID, value, bitsScanned,
+            // zeroCount,lengthVLI);
             index += lengthVLI;
             ACCodesCount += zeroCount + 1;
           }

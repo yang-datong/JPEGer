@@ -91,12 +91,24 @@ const uint8_t ChromaTable[COMPONENT_SIZE][COMPONENT_SIZE] = {
     {99, 99, 99, 99, 99, 99, 99, 99}, {99, 99, 99, 99, 99, 99, 99, 99}};
 
 /* Huffman表 */
+#define HT_DC 0
+#define HT_AC 1
+#define HT_Y 0
+#define HT_CbCr 1
+
 const uint8_t HuffmanLumaDCLenTable[HUFFMAN_CODE_LENGTH_POSSIBLE] = {
     00, 01, 05, 01, 01, 01, 01, 01, 01, 00, 00, 00, 00, 00, 00, 00};
 
 // 12 = 1 + 5 + 1 + 1 + 1 + 1 + 1 + 1
 const uint8_t HuffmanLumaDCValueTable[12] = {0, 1, 2, 3, 4,   5,
                                              6, 7, 8, 9, 0xA, 0xB};
+
+const uint8_t HuffmanChromaDCLenTable[HUFFMAN_CODE_LENGTH_POSSIBLE] = {
+    00, 03, 01, 01, 01, 01, 01, 01, 01, 01, 01, 00, 00, 00, 00, 00};
+
+// 12 = 3 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+const uint8_t HuffmanChromaDCValueTable[12] = {0, 1, 2, 3, 4,   5,
+                                               6, 7, 8, 9, 0xA, 0xB};
 
 const uint8_t HuffmanLumaACLenTable[HUFFMAN_CODE_LENGTH_POSSIBLE] = {
     00, 02, 01, 03, 03, 02, 04, 03, 05, 05, 04, 04, 00, 00, 01, 0x7d};
@@ -117,13 +129,6 @@ const uint8_t HuffmanLumaACValueTable[162] = {
     0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xE1, 0xE2,
     0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF1, 0xF2, 0xF3, 0xF4,
     0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA};
-
-const uint8_t HuffmanChromaDCLenTable[HUFFMAN_CODE_LENGTH_POSSIBLE] = {
-    00, 03, 01, 01, 01, 01, 01, 01, 01, 01, 01, 00, 00, 00, 00, 00};
-
-// 12 = 3 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
-const uint8_t HuffmanChromaDCValueTable[12] = {0, 1, 2, 3, 4,   5,
-                                               6, 7, 8, 9, 0xA, 0xB};
 
 const uint8_t HuffmanChromaACLenTable[HUFFMAN_CODE_LENGTH_POSSIBLE] = {
     00, 02, 01, 02, 04, 04, 03, 04, 07, 05, 04, 04, 00, 01, 02, 0x77};

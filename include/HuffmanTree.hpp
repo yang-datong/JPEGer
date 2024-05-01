@@ -7,7 +7,7 @@
 struct Node {
   bool root = false;
   bool leaf = false;
-  std::string code;
+  string code;
   uint16_t value = 0;
   shared_ptr<Node> lChild = nullptr, rChild = nullptr;
   std::shared_ptr<Node> parent = nullptr;
@@ -25,7 +25,8 @@ typedef std::shared_ptr<Node> NodePtr;
 class HuffmanTree {
  public:
   int buildHuffmanTree(HuffmanTable &htable);
-  const string decode(const std::string &huffCode);
+  const string decode(const string &huffCode);
+  const string encode(const uint8_t value);
 
  private:
   NodePtr _root = nullptr;

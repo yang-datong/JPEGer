@@ -2,16 +2,17 @@
 #define ENCODER_HPP_UW8N0IPM
 
 #include "APP0.hpp"
+#include "ByteStream.hpp"
 #include "COM.hpp"
+#include "Common.hpp"
 #include "DHT.hpp"
 #include "DQT.hpp"
+#include "HuffmanTree.hpp"
 #include "Image.hpp"
+#include "MCU.hpp"
 #include "SOF0.hpp"
 #include "SOS.hpp"
-
-#include "ByteStream.hpp"
-#include "HuffmanTree.hpp"
-#include "MCU.hpp"
+#include "Type.hpp"
 
 class Encoder {
  public:
@@ -41,10 +42,6 @@ class Encoder {
   Marker *_sos;
   Image _image;
 
-  const int HT_DC = 0;
-  const int HT_AC = 1;
-  const int HT_Y = 0;
-  const int HT_CbCr = 1;
   int readFile();
   string VLIEncode(int value);
   inline int fillPaddingBytes(string &scanData);
