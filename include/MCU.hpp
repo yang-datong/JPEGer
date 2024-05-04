@@ -15,9 +15,7 @@ class MCU {
   DCTCoeffs _dctCoeffs;
   RLE _rle;
 
-  int _order = 0;
-  const vector<QuantizationTable> _qtTables;
-
+  vector<QuantizationTable> _qtTables;
   /* 编码时：经过了中心化操作后的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
   array<int16_t, MCU_UNIT_SIZE> _zzOrder = {0};
   /* 解码时：经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
@@ -25,6 +23,9 @@ class MCU {
  public:
   MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables);
   MCU(RLE rle, const vector<QuantizationTable> &qTables);
+
+  void startEncode();
+  void startDecode();
 
  private:
   void encodeACandDC();
@@ -34,11 +35,13 @@ class MCU {
   void levelShift();
   void performLevelShift();
   void YUVToRGB();
+
   void printZZOrder();
+  void printUmatrix();
 
  public:
   /* 将反中心化的解码矩阵提供给外界创建图片等操作 */
-  const UCompMatrices &getAllMatrices() const { return _Umatrix; }
-  const RLE &getAllRLE() const { return _rle; }
+  const UCompMatrices &getMatrices() const { return _Umatrix; }
+  const RLE &getRLE() const { return _rle; }
 };
 #endif /* end of include guard: MCU_HPP_MJKLNXG9 */

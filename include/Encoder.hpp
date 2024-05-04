@@ -14,11 +14,6 @@
 #include "SOS.hpp"
 #include "Type.hpp"
 
-void writeBitStream(const std::vector<std::string> &bitStream,
-                    std::ofstream &outputFile);
-
-void writeBitStream(const string &scanData, ofstream &outputFile);
-
 class Encoder {
  public:
   Encoder(const string &inputFilePath, const string &outputFilePath);
@@ -27,7 +22,6 @@ class Encoder {
   ~Encoder();
   int startMakeMarker();
   int startEncode();
-  int encodeScanData();
   int createImage(const string ouputFileName);
 
  private:
@@ -47,10 +41,14 @@ class Encoder {
   Marker *_sos;
   Image _image;
 
-  int readFile();
   string VLIEncode(int value);
-  inline void fillPaddingBytes(string &data);
-  inline void fillPaddingBytes(char byteBuffer, ofstream &outputFile);
+  void writeBitStream(const string &scanData, ofstream &outputFile);
+  int encodeScanData(ofstream &outputFile);
+
+  void printZRLInfo(int HuffTableID, string &value, int symbol);
+  void printEOBInfo(int HuffTableID, string &value, int symbol);
+  void printCommonInfo(int HuffTableID, string &value, int symbol,
+                       int zeroCount, int coeffACLen);
 };
 
 #endif /* end of include guard: ENCODER_HPP_UW8N0IPM */

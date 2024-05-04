@@ -4,6 +4,7 @@
 #include "Image.hpp"
 #include "Type.hpp"
 #include <bitset>
+#include <chrono>
 #include <cstdint>
 
 Decoder::Decoder(const string &filePath) : _filePath(filePath) {
@@ -109,10 +110,22 @@ int Decoder::decodeScanData() {
       /* Y单独Huffman解码表，UV共享一张Huffman解码表 */
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
 
+      // 设置超时时间为 5 秒
+      const chrono::milliseconds timeout(5000);
+      // 开始计时
+      auto start = chrono::steady_clock::now();
+
       /* 1.解码直流系数（DC）：对于每个颜色分量（Y,U,V），直流系数表示一个8x8宏块（或MCU）的平均值*/
       while (true) {
         bitsScanned += scanData[index];
         index++;
+        // 检查是否超时
+        auto elapsed = chrono::duration_cast<chrono::milliseconds>(
+            chrono::steady_clock::now() - start);
+        if (elapsed > timeout) {
+          std::cerr << "\033[31mWrong JPEG file\033[0m" << std::endl;
+          return -1;
+        }
         /* 先解码最外层的Huffman编码（按照对应的Huffman类型解码） */
         string value = huffmanTree[HT_DC][HuffTableID].decode(bitsScanned);
         if (checkSpace(value)) {
@@ -179,7 +192,9 @@ int Decoder::decodeScanData() {
     }
 
     /*6.构建MCU块并添加到数组：输入流的每个MCU部分都被解码成含有直流和交流系数的RLE数组。然后使用RLE数据和量化表（m_QTables），构建出每个MCU的8x8矩阵，并将这个MCU添加到m_MCU数组中以保存解码数据。*/
-    _MCU.push_back(MCU(rle, quantizationTables));
+    MCU mcu(rle, quantizationTables);
+    mcu.startDecode();
+    _MCU.push_back(mcu);
   }
   return 0;
 }

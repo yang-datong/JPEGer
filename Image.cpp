@@ -28,7 +28,7 @@ int Image::createImageFromMCUs(const vector<MCU> &MCUs, uint16_t imgWidth,
   // Populate the pixel pointer based on data from the specified MCUs
   for (int y = 0; y < outputHeight / 8; y++) {
     for (int x = 0; x < outputWidth / 8; x++) {
-      auto pixelBlock = MCUs[mcuNum].getAllMatrices();
+      auto pixelBlock = MCUs[mcuNum].getMatrices();
 
       for (int v = 0; v < 8; ++v) {
         for (int u = 0; u < 8; ++u) {

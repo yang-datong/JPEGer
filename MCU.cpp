@@ -10,37 +10,34 @@ int MCU::_MCUCount = 0;
 MCU::MCU(RLE rle, const vector<QuantizationTable> &qTables)
     : _rle(rle), _qtTables(qTables) {
   _MCUCount++;
-  _order = _MCUCount;
-
-  decodeACandDC();
-  startIDCT();
-  performLevelShift();
-  if (Image::sOutputFileType != FileFormat::YUV)
-    YUVToRGB();
 }
 
 /* 提供进来编码的宏块应该是原始状态的，不应该包含负数像素值 */
 MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
     : _Umatrix(matrix), _qtTables(qTables) {
   _MCUCount++;
-  _order = _MCUCount;
+}
 
+void MCU::startEncode() {
+  // printUmatrix();
   levelShift();
   startDCT();
   encodeACandDC();
 }
 
-void MCU::printZZOrder() {
-  std::cout << "_zzOrder:";
-  for (int i = 0; i < MCU_UNIT_SIZE; i++) {
-    std::cout << "," << _zzOrder[i];
-  }
-  std::cout << std::endl;
+void MCU::startDecode() {
+  decodeACandDC();
+  startIDCT();
+  performLevelShift();
+  // printUmatrix();
+  if (Image::sOutputFileType != FileFormat::YUV)
+    YUVToRGB();
 }
 
 void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     _zzOrder = {0};
+    _rle[imageComponent].clear();
     matrixToArrayUseZigZag(_matrix[imageComponent], _zzOrder);
     int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
     for (int i = 0; i < MCU_UNIT_SIZE; i++) {
@@ -51,7 +48,8 @@ void MCU::encodeACandDC() {
       }
       _zzOrder[i] /= _qtTables[qtIndex][i];
     }
-    printZZOrder();
+
+    // printZZOrder();
 
     // if (imageComponent == 0) {
     //   std::cout << "原来的 _zzOrder[0]:" << _zzOrder[0];
@@ -59,7 +57,8 @@ void MCU::encodeACandDC() {
     int16_t DC = _zzOrder[0] - _DCDiff[imageComponent];
     _DCDiff[imageComponent] = _zzOrder[0];
     _zzOrder[0] = DC;
-    _rle[imageComponent].push_back(DC); //这个DC可能会为0,应该在后面进行判断
+    _rle[imageComponent].push_back(DC);
+    //    std::cout << "push DC:" << DC << std::endl;
     //   std::cout << ",差分编码后的 _zzOrder[0]:" << _zzOrder[0] << std::endl;
     // }
 
@@ -67,13 +66,13 @@ void MCU::encodeACandDC() {
     int zeroCount = 0;
     for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
       int16_t AC = _zzOrder[indexAC];
-      if (AC == 0 && zeroCount == 16 && indexAC != MCU_UNIT_SIZE) {
+      if (AC == 0 && zeroCount == 15 && indexAC != MCU_UNIT_SIZE - 1) {
         _rle[imageComponent].push_back(0xf);
         _rle[imageComponent].push_back(0);
         zeroCount = 0;
-      } else if (AC == 0 && zeroCount != 16 && indexAC != MCU_UNIT_SIZE) {
+      } else if (AC == 0 && zeroCount != 15 && indexAC != MCU_UNIT_SIZE - 1) {
         zeroCount++;
-      } else if (AC == 0 && indexAC == MCU_UNIT_SIZE) {
+      } else if (indexAC == MCU_UNIT_SIZE - 1) {
         _rle[imageComponent].push_back(0);
         _rle[imageComponent].push_back(0);
       } else {
@@ -109,12 +108,13 @@ void MCU::decodeACandDC() {
     DC = _DCDiff[imageComponent];
     //第一次将zzOrder0的值与前一个DC系数的差分值相加*/
 
+    // printZZOrder();
+
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
     int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
     for (int i = 0; i < MCU_UNIT_SIZE; i++)
       _zzOrder[i] *= _qtTables[qtIndex][i];
 
-    printZZOrder();
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
     arrayToMatrixUseZigZag(_zzOrder, _matrix[imageComponent]);
     // printMatrix(_matrix[imageComponent]);
@@ -137,7 +137,7 @@ void MCU::startDCT() {
 
         Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
         Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
-        _matrix[imageComponent][u][v] = (Cu * Cv) / 4.0 * sum;
+        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * sum);
       }
     }
   }
@@ -160,7 +160,7 @@ void MCU::startIDCT() {
           }
         }
 
-        _idctCoeffs[imageComponent][i][j] = 1.0 / 4.0 * sum;
+        _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
       }
     }
   }
@@ -207,4 +207,27 @@ void MCU::YUVToRGB() {
       _Umatrix[2][y][x] = B;
     }
   }
+}
+
+void MCU::printUmatrix() {
+  std::cout << "_Umatrix:";
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    for (int y = 0; y < COMPONENT_SIZE; ++y)
+      for (int x = 0; x < COMPONENT_SIZE; ++x)
+        cout << _Umatrix[imageComponent][y][x] << "["
+             << (imageComponent == 0   ? "Y"
+                 : imageComponent == 1 ? "U"
+                                       : "V")
+             << "],";
+  std::cout << std::endl;
+}
+
+void MCU::printZZOrder() {
+  static int zzCount = 0;
+  std::cout << "_zzOrder[" << zzCount << "]:";
+  for (int i = 0; i < MCU_UNIT_SIZE; i++) {
+    std::cout << _zzOrder[i] << ",";
+  }
+  std::cout << std::endl;
+  zzCount++;
 }

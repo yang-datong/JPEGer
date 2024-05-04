@@ -90,7 +90,7 @@ int mark::DQT::buildDQTable(
     for (int j = 0; j < COMPONENT_SIZE; j++) {
       float tmp = componentTab[i][j] * alpha;
       tmp = tmp < 1 ? 1 : tmp > 255 ? 255 : tmp;
-      matrix[i][j] = tmp;
+      matrix[i][j] = round(tmp);
     }
   }
   if (precision == 0) {
