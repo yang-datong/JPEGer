@@ -71,6 +71,11 @@ inline string getFileType(string &fileName) {
   return fileName.substr(fileName.find_last_of('.') + 1);
 }
 
+/* 半个字节合并为一个字节 */
+inline uint8_t combineOneByte(uint8_t high, uint8_t low) {
+  return (high << 4) | (low & 0xf);
+}
+
 #include "Common.tpp"
 
 #endif /* end of include guard: COMMON_HPP_S7ZCNIWC */

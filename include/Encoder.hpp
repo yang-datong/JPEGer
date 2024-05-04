@@ -14,6 +14,11 @@
 #include "SOS.hpp"
 #include "Type.hpp"
 
+void writeBitStream(const std::vector<std::string> &bitStream,
+                    std::ofstream &outputFile);
+
+void writeBitStream(const string &scanData, ofstream &outputFile);
+
 class Encoder {
  public:
   Encoder(const string &inputFilePath, const string &outputFilePath);
@@ -44,7 +49,8 @@ class Encoder {
 
   int readFile();
   string VLIEncode(int value);
-  inline int fillPaddingBytes(string &scanData);
+  inline void fillPaddingBytes(string &data);
+  inline void fillPaddingBytes(char byteBuffer, ofstream &outputFile);
 };
 
 #endif /* end of include guard: ENCODER_HPP_UW8N0IPM */

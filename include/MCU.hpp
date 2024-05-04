@@ -29,11 +29,12 @@ class MCU {
  private:
   void encodeACandDC();
   void decodeACandDC();
-  inline void startDCT();
-  inline void startIDCT();
-  inline void levelShift();
-  inline void performLevelShift();
-  inline void YUVToRGB();
+  void startDCT();
+  void startIDCT();
+  void levelShift();
+  void performLevelShift();
+  void YUVToRGB();
+  void printZZOrder();
 
  public:
   /* 将反中心化的解码矩阵提供给外界创建图片等操作 */

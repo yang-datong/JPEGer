@@ -30,6 +30,14 @@ MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
   encodeACandDC();
 }
 
+void MCU::printZZOrder() {
+  std::cout << "_zzOrder:";
+  for (int i = 0; i < MCU_UNIT_SIZE; i++) {
+    std::cout << "," << _zzOrder[i];
+  }
+  std::cout << std::endl;
+}
+
 void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     _zzOrder = {0};
@@ -43,19 +51,29 @@ void MCU::encodeACandDC() {
       }
       _zzOrder[i] /= _qtTables[qtIndex][i];
     }
-    // DC
-    int16_t &DC = _zzOrder[0];
-    DC -= _DCDiff[imageComponent];
-    _DCDiff[imageComponent] = DC;
-    _rle[imageComponent].push_back(DC);
-    // AC
+    printZZOrder();
+
+    // if (imageComponent == 0) {
+    //   std::cout << "原来的 _zzOrder[0]:" << _zzOrder[0];
+    //   DC ,差分编码
+    int16_t DC = _zzOrder[0] - _DCDiff[imageComponent];
+    _DCDiff[imageComponent] = _zzOrder[0];
+    _zzOrder[0] = DC;
+    _rle[imageComponent].push_back(DC); //这个DC可能会为0,应该在后面进行判断
+    //   std::cout << ",差分编码后的 _zzOrder[0]:" << _zzOrder[0] << std::endl;
+    // }
+
+    // AC ,RLE编码
     int zeroCount = 0;
     for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
       int16_t AC = _zzOrder[indexAC];
-      /* 如果最后剩了5个0,则表示为(4,0) */
-      if (AC == 0 && indexAC != MCU_UNIT_SIZE)
+      if (AC == 0 && zeroCount == 16 && indexAC != MCU_UNIT_SIZE) {
+        _rle[imageComponent].push_back(0xf);
+        _rle[imageComponent].push_back(0);
+        zeroCount = 0;
+      } else if (AC == 0 && zeroCount != 16 && indexAC != MCU_UNIT_SIZE) {
         zeroCount++;
-      else if (AC == 0 && indexAC == MCU_UNIT_SIZE) {
+      } else if (AC == 0 && indexAC == MCU_UNIT_SIZE) {
         _rle[imageComponent].push_back(0);
         _rle[imageComponent].push_back(0);
       } else {
@@ -96,13 +114,14 @@ void MCU::decodeACandDC() {
     for (int i = 0; i < MCU_UNIT_SIZE; i++)
       _zzOrder[i] *= _qtTables[qtIndex][i];
 
+    printZZOrder();
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
     arrayToMatrixUseZigZag(_zzOrder, _matrix[imageComponent]);
     // printMatrix(_matrix[imageComponent]);
   }
 }
 
-inline void MCU::startDCT() {
+void MCU::startDCT() {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int v = 0; v < COMPONENT_SIZE; ++v) {
@@ -124,7 +143,7 @@ inline void MCU::startDCT() {
   }
 }
 
-inline void MCU::startIDCT() {
+void MCU::startIDCT() {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int j = 0; j < COMPONENT_SIZE; ++j) {
@@ -148,7 +167,7 @@ inline void MCU::startIDCT() {
 }
 
 /* 中心化*/
-inline void MCU::levelShift() {
+void MCU::levelShift() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
@@ -156,7 +175,7 @@ inline void MCU::levelShift() {
 }
 
 /* 反中心化（反级别移位）*/
-inline void MCU::performLevelShift() {
+void MCU::performLevelShift() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
@@ -166,7 +185,7 @@ inline void MCU::performLevelShift() {
   // 2. 向每个四舍五入后的系数加上128，以执行反中心化处理。
 }
 
-inline void MCU::YUVToRGB() {
+void MCU::YUVToRGB() {
   /* YUV444 packed 表示为三个字节一个像素，而矩阵是8x8个像素，故有8x8x3个字节*/
   for (int y = 0; y < COMPONENT_SIZE; ++y) {
     for (int x = 0; x < COMPONENT_SIZE; ++x) {

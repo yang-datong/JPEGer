@@ -1,4 +1,8 @@
 #include "Encoder.hpp"
+#include "Common.hpp"
+#include <bitset>
+#include <cstdint>
+#include <fstream>
 
 Encoder::Encoder(const string &inputFilePath, const string &outputFilePath)
     : _inputFilePath(inputFilePath), _outputFilePath(outputFilePath) {
@@ -71,8 +75,15 @@ int Encoder::startMakeMarker() {
   mark::HuffmanTrees huffmanTree =
       static_cast<mark::DHT *>(_dht)->getHuffmanTree();
 
+  vector<QuantizationTable> quantizationTables =
+      static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
+  if (quantizationTables.size() == 0 || quantizationTables[0].size() == 0 ||
+      quantizationTables[1].size() == 0) {
+    std::cerr << "\033[31mError -> quantizationTables.size\033[0m" << std::endl;
+    return -1;
+  }
+
   for (int i = 0; i < MCUCount; i++) {
-    int matrixIndex = 0;
     UCompMatrices matrix;
     for (int y = 0; y < 8; y++) {
       for (int x = 0; x < 8; x++) {
@@ -83,70 +94,83 @@ int Encoder::startMakeMarker() {
       }
     }
 
-    vector<QuantizationTable> quantizationTables =
-        static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
-    if (quantizationTables.size() == 0 || quantizationTables[0].size() == 0 ||
-        quantizationTables[1].size() == 0) {
-      std::cerr << "\033[31mError -> quantizationTables.size\033[0m"
-                << std::endl;
-      return -1;
-    }
     MCU mcu(matrix, quantizationTables);
-    RLE rle = mcu.getAllRLE();
 
     for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+      RLE rle = mcu.getAllRLE();
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
       if (rle[imageComponent].size() != 0) {
-        if (matrixIndex == 0) {
-          string coeffDC = VLIEncode(rle[imageComponent][0]);
-          uint8_t coeffDCLen = coeffDC.length();
-          string value = huffmanTree[HT_DC][HuffTableID].encode(coeffDCLen);
-          value += coeffDC;
-          scanData.append(value);
-          /* TODO YangJing 这里的coeffDCLen不应该大于12,感觉错了 <24-05-02
-           * 00:07:01> */
-          //          std::cout << "coeffDCLen:" << (int)coeffDCLen <<
-          //          std::endl;
-        } else {
-          for (int i = 1; i <= (int)rle[imageComponent].size() - 2; i += 2) {
-            uint8_t zeroCount = rle[imageComponent][i];
-            if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
-              break;
+        // if (imageComponent == 0) {
+        //   std::cout << "DC:" << rle[imageComponent][0] << std::endl;
+        // }
+        string coeffDC = VLIEncode(rle[imageComponent][0]);
+        uint8_t coeffDCLen = coeffDC.length();
+        string value = huffmanTree[HT_DC][HuffTableID].encode(coeffDCLen);
+        value += coeffDC;
+        /* Huffman编码后不会存在0xff的字节 */
+        scanData.append(value);
+        /* DC的系数长度不应该大于12 */
+        if (coeffDCLen > 12) {
+          std::cerr << "\033[31mcoeffDCLen:" << (int)coeffDCLen << "\033[0m"
+                    << std::endl;
+          return -1;
+        }
+        for (int i = 1; i <= (int)rle[imageComponent].size() - 2; i += 2) {
+          uint8_t zeroCount = rle[imageComponent][i];
+
+          uint8_t symbol;
+          if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
+            symbol = 0x00;
+          else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
+            symbol = 0xf0;
+          else {
             string coeffAC = VLIEncode(rle[imageComponent][i + 1]);
             uint8_t coeffACLen = coeffAC.length();
-            uint8_t symbol = zeroCount;
-            /* TODO YangJing 封装半个字节合并操作： <24-05-01 22:42:38> */
-            /*
-             * uint8_t combineRLEandCoeff(uint8_t runLength, uint8_t
-             * coeffLength) { return (runLength << 4) | (coeffLength & 0x0F);
-             * }
-             * */
-            symbol <<= 4;
-            symbol |= coeffACLen;
-            string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
-            if (checkSpace(value)) {
-              ///* T.81 page 153 */
-              // std::cout << "AC -> {" << std::endl;
-              // std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" :
-              // "Chroma")
-              //           << ", Run/Size:" << (int)zeroCount << "/"
-              //           << (int)coeffACLen << ", Code Length:" <<
-              //           value.length()
-              //           << ", Code word:" << value << ", " << (int)symbol
-              //           << " -encode-> " << value << std::endl;
-              // std::cout << "}" << std::endl;
-              scanData.append(value);
-            }
+            symbol = combineOneByte(zeroCount, coeffACLen);
+          }
+          string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
+          if (symbol == 0xf0) {
+            /* 这里应该是ZRL */
+            // std::cout << "AC -> {" << std::endl;
+            // std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" :
+            // "Chroma")
+            //           << ", Run/Size:F/0(ZRL)"
+            //           << ", Code Length:" << value.length()
+            //           << ", Code word:" << value << ", " << (int)symbol
+            //           << " -encode-> " << value << std::endl;
+            // std::cout << "}" << std::endl;
+          } else if (symbol == 0x00) {
+            /* 这里应该是EOB（有的图片编码，不一定会进这里） */
+            // std::cout << "AC -> {" << std::endl;
+            // std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" :
+            // "Chroma")
+            //           << ", Run/Size:0/0(EOB)"
+            //           << ", Code Length:" << value.length()
+            //           << ", Code word:" << value << ", " << (int)symbol
+            //           << " -encode-> " << value << std::endl;
+            // std::cout << "}" << std::endl;
+          }
+          /* TODO YangJing 好像不需要检测checkSpace <24-05-02 13:37:21> */
+          if (checkSpace(value)) {
+            ///* T.81 page 153 */
+            // std::cout << "AC -> {" << std::endl;
+            // std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" :
+            // "Chroma")
+            //           << ", Run/Size:" << (int)zeroCount << "/"
+            //           << (int)coeffACLen << ", Code Length:" <<
+            //           value.length()
+            //           << ", Code word:" << value << ", " << (int)symbol
+            //           << " -encode-> " << value << std::endl;
+            // std::cout << "}" << std::endl;
+
+            scanData.append(value);
           }
         }
       }
-      /* TODO YangJing 这个位置不对，不是放在这里 <24-05-02 00:07:58> */
-      matrixIndex++;
     }
   }
-  //  std::cout << "scanData:" << scanData << std::endl;
-  //  TODO 有问题 <24-05-01 18:23:32, YangJing>
   outputFile.write((const char *)scanData.c_str(), scanData.length());
+  writeBitStream(scanData, outputFile);
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));
@@ -156,6 +180,49 @@ int Encoder::startMakeMarker() {
   outputFile.close();
   return 0;
 }
+
+void writeBitStream(const string &scanData, ofstream &outputFile) {
+  uint8_t byteBuffer = 0; // 用于暂存构建中的字节
+  int bitCount = 0;       // 累计构建字节中的位数
+
+  for (char bit : scanData) {
+    byteBuffer = (byteBuffer << 1) | (bit - '0'); // 将下一个位加入到字节缓冲区
+    bitCount++;                                   // 增加位的计数
+
+    if (bitCount == 8) {                             // 如果字节已经填满
+      outputFile.put(static_cast<char>(byteBuffer)); // 将字节写入文件
+      if ((uint8_t)byteBuffer == 0xff) {
+        char zero = 0x00;
+        outputFile.write(&zero, 1);
+      }
+      bitCount = 0;   // 重置计数器
+      byteBuffer = 0; // 重置字节缓冲区
+    }
+  }
+
+  // 处理最后一个不完整的字节（如果有）
+  if (bitCount > 0) {
+    byteBuffer <<= (8 - bitCount); // 左移剩余的位，确保它们在字节的高位
+    outputFile.put(static_cast<char>(byteBuffer)); // 将最后的字节写入文件
+    if ((uint8_t)byteBuffer == 0xff) {
+      char zero = 0x00;
+      outputFile.write(&zero, 1);
+    }
+  }
+}
+
+// inline void Encoder::fillPaddingBytes(string &data) {
+//   if (data == "11111111")
+//     data = "1111111100000000";
+// }
+//
+// inline void Encoder::fillPaddingBytes(char byteBuffer, ofstream &outputFile)
+// {
+//   if ((uint8_t)byteBuffer == 0xff) {
+//     char zero = 0x00;
+//     outputFile.write(&zero, 1);
+//   }
+// }
 
 /* VLI编码：
  * 1. 计算绝对值的二进制表示。
