@@ -40,11 +40,15 @@ int main(int argc, char *argv[]) {
               << std::endl;
     ret = decoder.createImage(outputFileName);
     RET(ret, "Failed for createImage()")
-  } else {
+  } else if (inSuffixStr == "yuv") {
+    const int imgWidth = 512, imgHeight = 512;
+    Encoder encoder(inputFileName, outputFileName, inpuType, imgWidth,
+                    imgHeight);
+    ret = encoder.startMakeMarker();
+    RET(ret, "Failed for startMakeMarker()")
+  } else if (inSuffixStr == "bmp") {
+    inpuType = FileFormat::BMP;
     Encoder encoder(inputFileName, outputFileName, inpuType);
-    std::cout << "---------------------------------------------- createImage "
-                 "----------------------------------------------"
-              << std::endl;
     ret = encoder.startMakeMarker();
     RET(ret, "Failed for startMakeMarker()")
   }

@@ -2,6 +2,7 @@
 #define ENCODER_HPP_UW8N0IPM
 
 #include "APP0.hpp"
+#include "BMP.hpp"
 #include "ByteStream.hpp"
 #include "COM.hpp"
 #include "Common.hpp"
@@ -19,6 +20,8 @@ class Encoder {
   Encoder(const string &inputFilePath, const string &outputFilePath);
   Encoder(const string &inputFilePath, const string &outputFilePath,
           const int inputTypeFile);
+  Encoder(const string &inputFilePath, const string &outputFilePath,
+          const int inputTypeFile, const int imgWidth, const int imgHeight);
   ~Encoder();
   int startMakeMarker();
   int startEncode();
@@ -28,6 +31,8 @@ class Encoder {
   ifstream _file;
   string _inputFilePath;
   string _outputFilePath;
+  int _imgWidth = 0;
+  int _imgHeight = 0;
 
   uint8_t *_buf = nullptr;
   int _bufSize = 0;

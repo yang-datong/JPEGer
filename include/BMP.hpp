@@ -50,6 +50,8 @@ class BMP {
   uint8_t *getU() { return _U; }
   uint8_t *getV() { return _V; }
   int getYUVSize() { return _YUVSize; }
+  int getWidth() { return _width; }
+  int getHeight() { return _height; }
 
   int RGBToYUV();
 

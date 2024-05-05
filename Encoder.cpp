@@ -1,5 +1,8 @@
 #include "Encoder.hpp"
+#include "BMP.hpp"
 #include "Common.hpp"
+#include "Image.hpp"
+#include "Type.hpp"
 #include <bitset>
 #include <cstdint>
 #include <fstream>
@@ -18,6 +21,15 @@ Encoder::Encoder(const string &inputFilePath, const string &outputFilePath,
                  const int inputTypeFile)
     : Encoder(inputFilePath, outputFilePath) {
   Image::sInputFileType = inputTypeFile;
+}
+
+Encoder::Encoder(const string &inputFilePath, const string &outputFilePath,
+                 const int inputTypeFile, const int imgWidth,
+                 const int imgHeight)
+    : Encoder(inputFilePath, outputFilePath) {
+  Image::sInputFileType = inputTypeFile;
+  this->_imgWidth = imgWidth;
+  this->_imgHeight = imgHeight;
 }
 
 Encoder::~Encoder() {
@@ -116,24 +128,39 @@ string Encoder::VLIEncode(int value) {
 }
 
 int Encoder::encodeScanData(ofstream &outputFile) {
-  /* TODO YangJing 暂时写死宽高 <24-04-29 22:11:07> */
-  const int imgWidth = 512, imgHeight = 512;
   uint8_t *buffer = nullptr;
   int bufferSize = 0;
-  if (Image::readYUVFile(_inputFilePath, buffer, bufferSize))
-    return -1;
 
-  /* YUV444p */
-  if (bufferSize != (imgWidth * imgHeight) * 3) {
-    std::cout << "Only support YUV444p" << std::endl;
-    return -1;
+  uint8_t *bufferY = nullptr;
+  uint8_t *bufferU = nullptr;
+  uint8_t *bufferV = nullptr;
+  if (Image::sInputFileType == FileFormat::YUV) {
+    if (Image::readYUVFile(_inputFilePath, buffer, bufferSize)) {
+      std::cerr << "\033[31mreadYUVFile failed" + _inputFilePath + " 033[0m"
+                << std::endl;
+      return -1;
+    }
+
+    /* YUV444p */
+    if (bufferSize != (_imgWidth * _imgHeight) * 3) {
+      std::cout << "Only support YUV444p" << std::endl;
+      return -1;
+    }
+
+    int WH = _imgWidth * _imgHeight;
+    // int bufferYSzie = WH, bufferUSize = WH, bufferVSize = WH;
+    bufferY = buffer;
+    bufferU = buffer + WH;
+    bufferV = buffer + WH * 2;
+  } else if (Image::sInputFileType == FileFormat::BMP) {
+    File::BMP bmp;
+    bmp.BMPToYUV(_inputFilePath);
+    bufferY = bmp.getY();
+    bufferU = bmp.getU();
+    bufferV = bmp.getV();
+    _imgWidth = bmp.getWidth();
+    _imgHeight = bmp.getHeight();
   }
-
-  int WH = imgWidth * imgHeight;
-  // int bufferYSzie = WH, bufferUSize = WH, bufferVSize = WH;
-  uint8_t *bufferY = buffer;
-  uint8_t *bufferU = buffer + WH;
-  uint8_t *bufferV = buffer + WH * 2;
 
   // int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
   // int index = 0;
@@ -150,14 +177,14 @@ int Encoder::encodeScanData(ofstream &outputFile) {
     return -1;
   }
 
-  for (int y = 0; y < imgHeight; y += 8) {
-    for (int x = 0; x < imgWidth; x += 8) {
+  for (int y = 0; y < _imgHeight; y += 8) {
+    for (int x = 0; x < _imgWidth; x += 8) {
       UCompMatrices matrix;
       for (int dy = 0; dy < 8; ++dy) {
         for (int dx = 0; dx < 8; ++dx) {
-          matrix[0][dy][dx] = bufferY[(y + dy) * imgHeight + (x + dx)];
-          matrix[1][dy][dx] = bufferU[(y + dy) * imgHeight + (x + dx)];
-          matrix[2][dy][dx] = bufferV[(y + dy) * imgHeight + (x + dx)];
+          matrix[0][dy][dx] = bufferY[(y + dy) * _imgHeight + (x + dx)];
+          matrix[1][dy][dx] = bufferU[(y + dy) * _imgHeight + (x + dx)];
+          matrix[2][dy][dx] = bufferV[(y + dy) * _imgHeight + (x + dx)];
         }
       }
       _MCU.push_back(MCU(matrix, quantizationTables));
