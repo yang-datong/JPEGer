@@ -50,10 +50,16 @@ class Encoder {
   void writeBitStream(const string &scanData, ofstream &outputFile);
   int encodeScanData(ofstream &outputFile);
 
+  void printDCInfo(int HuffTableID, int category, int codeLen, string &value);
   void printZRLInfo(int HuffTableID, string &value, int symbol);
   void printEOBInfo(int HuffTableID, string &value, int symbol);
   void printCommonInfo(int HuffTableID, string &value, int symbol,
                        int zeroCount, int coeffACLen);
+
+  int32_t jpeg_write_bits(uint32_t data, int32_t len, int32_t flush,
+                          ofstream &outputFile);
+
+  int32_t jpeg_write_u8(uint8_t data, ofstream &outputFile);
 };
 
 #endif /* end of include guard: ENCODER_HPP_UW8N0IPM */

@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
   /* 不指定参数则执行编码操作 */
-  string inputFileName = "./lenna.yuv";
+  string inputFileName = "./lenna.bmp";
   string outputFileName = "./demo.jpg";
   if (argc > 2) {
     inputFileName = argv[1];

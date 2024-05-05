@@ -19,17 +19,21 @@ MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
 }
 
 void MCU::startEncode() {
+  // printUmatrix();
   levelShift();
+  // printDCTCoeffs();
   startDCT();
-  encodeACandDC();
   // printMatrix();
+  encodeACandDC();
 }
 
 void MCU::startDecode() {
-  // printMatrix();
   decodeACandDC();
+  // printMatrix();
   startIDCT();
+  // printIDCTCoeffs();
   performLevelShift();
+  // printUmatrix();
   if (Image::sOutputFileType != FileFormat::YUV)
     YUVToRGB();
 }
@@ -37,7 +41,6 @@ void MCU::startDecode() {
 void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     _zzOrder = {0};
-    _rle[imageComponent].clear();
     matrixToArrayUseZigZag(_matrix[imageComponent], _zzOrder);
     int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
     for (int i = 0; i < MCU_UNIT_SIZE; i++) {
@@ -54,36 +57,46 @@ void MCU::encodeACandDC() {
     int16_t DC = _zzOrder[0] - _DCDiff[imageComponent];
     _DCDiff[imageComponent] = _zzOrder[0];
     _zzOrder[0] = DC;
+    _rle[imageComponent].push_back(0);
     _rle[imageComponent].push_back(DC);
     //    std::cout << "push DC:" << DC << std::endl;
     //   std::cout << ",差分编码后的 _zzOrder[0]:" << _zzOrder[0] << std::endl;
     // }
 
     // printZZOrder();
-    //  AC ,RLE编码
+    //   AC ,RLE编码
     int zeroCount = 0;
+    // std::cout << "AC:";
     for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
       int16_t AC = _zzOrder[indexAC];
-      if (AC == 0 && zeroCount == 15 && indexAC != MCU_UNIT_SIZE - 1) {
-        _rle[imageComponent].push_back(0xf);
-        _rle[imageComponent].push_back(0);
-        zeroCount = 0;
-      } else if (AC == 0 && zeroCount != 15 && indexAC != MCU_UNIT_SIZE - 1) {
+      //  std::cout << AC << ",";
+      if (AC == 0) {
         zeroCount++;
-      } else if (indexAC == MCU_UNIT_SIZE - 1) {
-        _rle[imageComponent].push_back(0);
-        _rle[imageComponent].push_back(0);
+        if (zeroCount == 16) { // 如果已经数了15个零，遇到第16个零
+          _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
+          _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
+          zeroCount = 0;
+        }
       } else {
         _rle[imageComponent].push_back(zeroCount);
         _rle[imageComponent].push_back(AC);
         zeroCount = 0;
       }
+      if (indexAC == MCU_UNIT_SIZE - 1 && zeroCount > 0) {
+        // 如果是最后一个系数并且之前有零
+        _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
+        _rle[imageComponent].push_back(0x0); // Minor byte: EOB
+        zeroCount = 0;                       // 重置0值的计数器
+      }
     }
+    // std::cout << std::endl;
+    // printRLE();
   }
 }
 
 void MCU::decodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+    // printRLE();
     _zzOrder = {0};
     /* 经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
 
@@ -267,4 +280,20 @@ void MCU::printZZOrder() {
   }
   std::cout << std::endl;
   zzCount++;
+}
+
+void MCU::printRLE() {
+  static int rleCount = 0;
+  std::cout << "_RLE[" << rleCount << "]:";
+  for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+    for (int i = 0; i < (int)_rle[imageComponent].size(); i++) {
+      std::cout << _rle[imageComponent][i] << "["
+                << (imageComponent == 0   ? "Y"
+                    : imageComponent == 1 ? "U"
+                                          : "V")
+                << "],";
+    }
+  }
+  rleCount++;
+  std::cout << std::endl;
 }

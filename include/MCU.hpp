@@ -41,6 +41,7 @@ class MCU {
   void printUmatrix();
   void printDCTCoeffs();
   void printIDCTCoeffs();
+  void printRLE();
 
  public:
   /* 将反中心化的解码矩阵提供给外界创建图片等操作 */

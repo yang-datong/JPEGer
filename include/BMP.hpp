@@ -39,6 +39,8 @@ class BMP {
   uint8_t *_rgbBuffer = nullptr;
   int _rgbBufferSize = 0;
   uint8_t *_Y = nullptr, *_U = nullptr, *_V = nullptr;
+  uint8_t *_yuv444PackedBuffer = nullptr;
+  uint8_t *_yuv444PlanarBuffer = nullptr;
   int _YUVSize = 0;
 
  public:
@@ -46,9 +48,8 @@ class BMP {
   ~BMP();
   uint8_t *getRGBBuffer() { return _rgbBuffer; }
   int getRGBBufferSize() { return _rgbBufferSize; }
-  uint8_t *getY() { return _Y; }
-  uint8_t *getU() { return _U; }
-  uint8_t *getV() { return _V; }
+  uint8_t *getYUV444PackedBuffer() const { return _yuv444PackedBuffer; }
+  uint8_t *getYUV444PlanarBuffer() const { return _yuv444PlanarBuffer; }
   int getYUVSize() { return _YUVSize; }
   int getWidth() { return _width; }
   int getHeight() { return _height; }

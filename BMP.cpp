@@ -1,6 +1,8 @@
 #include "BMP.hpp"
+#include "Image.hpp"
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <ios>
 
 File::BMP::BMP() {}
@@ -68,9 +70,7 @@ int File::BMP::BMPToYUV(string &bmpFilePath, string yuvFilePath) {
     std::cerr << "Error opening RGG file!" << std::endl;
     return -1;
   }
-  outputFile.write((const char *)_Y, _YUVSize);
-  outputFile.write((const char *)_U, _YUVSize);
-  outputFile.write((const char *)_V, _YUVSize);
+  outputFile.write((const char *)_yuv444PlanarBuffer, _YUVSize);
   outputFile.close();
   std::cout << "Output RGB file: " + yuvFilePath << std::endl;
 
@@ -80,10 +80,11 @@ int File::BMP::BMPToYUV(string &bmpFilePath, string yuvFilePath) {
 }
 
 int File::BMP::RGBToYUV() {
-  _YUVSize = _height * _width;
-  _Y = new uint8_t[_YUVSize];
-  _U = new uint8_t[_YUVSize];
-  _V = new uint8_t[_YUVSize];
+  _YUVSize = _height * _width * 3;
+  int size = _height * _width;
+  _Y = new uint8_t[size];
+  _U = new uint8_t[size];
+  _V = new uint8_t[size];
   int offset = -1;
   for (int i = 0; i < _height; i++) {
     for (int j = 0; j < _width; j++) {
@@ -97,6 +98,20 @@ int File::BMP::RGBToYUV() {
       _V[offset] = round(0.5f * r - 0.4187f * g - 0.0813f * b + 128);
     }
   }
+  _yuv444PlanarBuffer = new uint8_t[_YUVSize];
+  memcpy(_yuv444PlanarBuffer, _Y, size);
+  memcpy(_yuv444PlanarBuffer + size, _U, size);
+  memcpy(_yuv444PlanarBuffer + size * 2, _V, size);
+
+  _yuv444PackedBuffer = new uint8_t[_YUVSize];
+  Image::YUV444PlanarToPacked(_yuv444PlanarBuffer, _yuv444PackedBuffer, _width,
+                              _height);
+  delete[] _Y;
+  _Y = nullptr;
+  delete[] _U;
+  _U = nullptr;
+  delete[] _V;
+  _V = nullptr;
   return 0;
 }
 
@@ -169,5 +184,14 @@ int File::BMP::close() {
     delete[] _V;
     _V = nullptr;
   }
+  if (_yuv444PlanarBuffer) {
+    delete[] _yuv444PlanarBuffer;
+    _yuv444PlanarBuffer = nullptr;
+  }
+  if (_yuv444PackedBuffer) {
+    delete[] _yuv444PackedBuffer;
+    _yuv444PackedBuffer = nullptr;
+  }
+  _YUVSize = 0;
   return 0;
 }
