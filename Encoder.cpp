@@ -6,6 +6,7 @@
 #include <bitset>
 #include <cstdint>
 #include <fstream>
+#include <ios>
 
 Encoder::Encoder(const string &inputFilePath, const string &outputFilePath)
     : _inputFilePath(inputFilePath), _outputFilePath(outputFilePath) {
@@ -177,14 +178,18 @@ int Encoder::encodeScanData(ofstream &outputFile) {
     return -1;
   }
 
+  uint8_t *packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
+  Image::YUV444PlanarToPacked(buffer, packedBuffer, _imgWidth, _imgHeight);
+
   for (int y = 0; y < _imgHeight; y += 8) {
     for (int x = 0; x < _imgWidth; x += 8) {
       UCompMatrices matrix;
       for (int dy = 0; dy < 8; ++dy) {
         for (int dx = 0; dx < 8; ++dx) {
-          matrix[0][dy][dx] = bufferY[(y + dy) * _imgHeight + (x + dx)];
-          matrix[1][dy][dx] = bufferU[(y + dy) * _imgHeight + (x + dx)];
-          matrix[2][dy][dx] = bufferV[(y + dy) * _imgHeight + (x + dx)];
+          int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
+          matrix[0][dy][dx] = packedBuffer[offset];
+          matrix[1][dy][dx] = packedBuffer[offset + 1];
+          matrix[2][dy][dx] = packedBuffer[offset + 2];
         }
       }
       _MCU.push_back(MCU(matrix, quantizationTables));

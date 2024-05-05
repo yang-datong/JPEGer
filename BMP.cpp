@@ -20,9 +20,6 @@ int File::BMP::BMPToRBG(string &bmpFilePath, string rgbFilePath) {
   _width = info.width;
   _height = info.height;
 
-  std::cout << "Width: " << _width << std::endl;
-  std::cout << "Height: " << _height << std::endl;
-
   // 为像素数据分配内存
   int bufferSize = _width * _height * 3;
   uint8_t *buffer = new uint8_t[bufferSize];

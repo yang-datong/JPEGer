@@ -19,17 +19,17 @@ MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
 }
 
 void MCU::startEncode() {
-  // printUmatrix();
   levelShift();
   startDCT();
   encodeACandDC();
+  // printMatrix();
 }
 
 void MCU::startDecode() {
+  // printMatrix();
   decodeACandDC();
   startIDCT();
   performLevelShift();
-  // printUmatrix();
   if (Image::sOutputFileType != FileFormat::YUV)
     YUVToRGB();
 }
@@ -48,9 +48,6 @@ void MCU::encodeACandDC() {
       }
       _zzOrder[i] /= _qtTables[qtIndex][i];
     }
-
-    // printZZOrder();
-
     // if (imageComponent == 0) {
     //   std::cout << "原来的 _zzOrder[0]:" << _zzOrder[0];
     //   DC ,差分编码
@@ -62,7 +59,8 @@ void MCU::encodeACandDC() {
     //   std::cout << ",差分编码后的 _zzOrder[0]:" << _zzOrder[0] << std::endl;
     // }
 
-    // AC ,RLE编码
+    // printZZOrder();
+    //  AC ,RLE编码
     int zeroCount = 0;
     for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
       int16_t AC = _zzOrder[indexAC];
@@ -102,13 +100,13 @@ void MCU::decodeACandDC() {
       index++;
     }
 
+    // printZZOrder();
+
     /*2. 对DC系数进行差分解码：除了Y,U,V的第一个是正常值外，后面的值都是差数值*/
     int16_t &DC = _zzOrder[0]; // DC系数（第一个系数，代表块的平均值）
     _DCDiff[imageComponent] += DC;
     DC = _DCDiff[imageComponent];
     //第一次将zzOrder0的值与前一个DC系数的差分值相加*/
-
-    // printZZOrder();
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
     int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
@@ -215,6 +213,45 @@ void MCU::printUmatrix() {
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
         cout << _Umatrix[imageComponent][y][x] << "["
+             << (imageComponent == 0   ? "Y"
+                 : imageComponent == 1 ? "U"
+                                       : "V")
+             << "],";
+  std::cout << std::endl;
+}
+
+void MCU::printMatrix() {
+  std::cout << "_matrix:";
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    for (int y = 0; y < COMPONENT_SIZE; ++y)
+      for (int x = 0; x < COMPONENT_SIZE; ++x)
+        cout << _matrix[imageComponent][y][x] << "["
+             << (imageComponent == 0   ? "Y"
+                 : imageComponent == 1 ? "U"
+                                       : "V")
+             << "],";
+  std::cout << std::endl;
+}
+
+void MCU::printDCTCoeffs() {
+  std::cout << "_dctCoeffs:";
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    for (int y = 0; y < COMPONENT_SIZE; ++y)
+      for (int x = 0; x < COMPONENT_SIZE; ++x)
+        cout << _dctCoeffs[imageComponent][y][x] << "["
+             << (imageComponent == 0   ? "Y"
+                 : imageComponent == 1 ? "U"
+                                       : "V")
+             << "],";
+  std::cout << std::endl;
+}
+
+void MCU::printIDCTCoeffs() {
+  std::cout << "_idctCoeffs:";
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    for (int y = 0; y < COMPONENT_SIZE; ++y)
+      for (int x = 0; x < COMPONENT_SIZE; ++x)
+        cout << _idctCoeffs[imageComponent][y][x] << "["
              << (imageComponent == 0   ? "Y"
                  : imageComponent == 1 ? "U"
                                        : "V")

@@ -21,5 +21,8 @@ class Image {
                           uint16_t imgHeight);
   int outputToYUVFile(const string &outputFileName);
   int outputToPPMFile(const string &outputFileName);
+
+  static int YUV444PlanarToPacked(uint8_t *planarBuffer, uint8_t *packedBuffer,
+                                  int width, int height);
 };
 #endif /* end of include guard: IMAGE_HPP_J7ITHE8O */

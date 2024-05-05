@@ -37,7 +37,10 @@ class MCU {
   void YUVToRGB();
 
   void printZZOrder();
+  void printMatrix();
   void printUmatrix();
+  void printDCTCoeffs();
+  void printIDCTCoeffs();
 
  public:
   /* 将反中心化的解码矩阵提供给外界创建图片等操作 */

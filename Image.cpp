@@ -166,3 +166,23 @@ int Image::readFile(const string &filePath, uint8_t *&buf, int &bufSize) {
     return -2;
   return 0;
 }
+
+/* YUV444的planner格式转为packed模式 */
+int Image::YUV444PlanarToPacked(uint8_t *planarBuffer, uint8_t *packedBuffer,
+                                int width, int height) {
+  if (planarBuffer == nullptr || width <= 0 || height <= 0)
+    return -1;
+
+  int frameSize = width * height;
+
+  uint8_t *bufferY = planarBuffer;
+  uint8_t *bufferU = planarBuffer + frameSize;
+  uint8_t *bufferV = planarBuffer + frameSize * 2;
+
+  for (int i = 0; i < frameSize; i++) {
+    *packedBuffer++ = bufferY[i]; // Y
+    *packedBuffer++ = bufferU[i]; // U
+    *packedBuffer++ = bufferV[i]; // V
+  }
+  return 0;
+}
