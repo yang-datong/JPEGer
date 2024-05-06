@@ -15,8 +15,8 @@ typedef struct __attribute__((packed)) _SOF0 {
   uint8_t SOF0[2] = {0xff, JFIF::SOF0};
   uint16_t len = 0;
   uint8_t precision = 0;
-  uint16_t imgWidth = 0;
   uint16_t imgHeight = 0;
+  uint16_t imgWidth = 0;
   uint8_t imageComponentCount = 0;
 } SOF0Header;
 
