@@ -30,10 +30,16 @@ class MCU {
  private:
   void encodeACandDC();
   void decodeACandDC();
+
   void startDCT();
+  void dctComponent(int imageComponent);
+
   void startIDCT();
+  void idctComponent(int imageComponent);
+
   void levelShift();
   void performLevelShift();
+
   void fillACRLE(int imageComponent);
   void fillACRLE2(int imageComponent);
 

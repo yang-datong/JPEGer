@@ -2,7 +2,6 @@
 #include "Common.hpp"
 #include "Image.hpp"
 #include "Type.hpp"
-#include <cstdint>
 
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
@@ -170,43 +169,83 @@ void MCU::decodeACandDC() {
   }
 }
 
-void MCU::startDCT() {
+void MCU::dctComponent(int imageComponent) {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
-  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    for (int v = 0; v < COMPONENT_SIZE; ++v) {
-      for (int u = 0; u < COMPONENT_SIZE; ++u) {
-        sum = 0;
-        for (int i = 0; i < COMPONENT_SIZE; ++i) {
-          for (int j = 0; j < COMPONENT_SIZE; ++j) {
-            sum += _dctCoeffs[imageComponent][i][j] *
-                   cos((2 * i + 1) * u * M_PI / 16) *
-                   cos((2 * j + 1) * v * M_PI / 16);
-          }
-        }
 
-        Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
-        Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
-        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * sum);
+  for (int v = 0; v < COMPONENT_SIZE; ++v) {
+    for (int u = 0; u < COMPONENT_SIZE; ++u) {
+      sum = 0;
+      for (int i = 0; i < COMPONENT_SIZE; ++i) {
+        for (int j = 0; j < COMPONENT_SIZE; ++j) {
+          sum += _dctCoeffs[imageComponent][i][j] *
+                 cos((2 * i + 1) * u * M_PI / 16) *
+                 cos((2 * j + 1) * v * M_PI / 16);
+        }
       }
+      Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
+      Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+      _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * sum);
     }
   }
 }
 
+void MCU::startDCT() {
+  vector<thread> threads;
+  // 先为每个图像分量创建线程
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    threads.push_back(thread(&MCU::dctComponent, this, imageComponent));
+
+  // 等待所有线程完成
+  for (thread &t : threads)
+    if (t.joinable())
+      t.join();
+}
+
+#if defined(SSE)
 void MCU::startIDCT() {
-  float sum = 0.0, Cu = 0.0, Cv = 0.0;
+  __m128 sum_sse = _mm_setzero_ps(); // 使用SSE指令集置零
+  float sum_array[4];
+
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int j = 0; j < COMPONENT_SIZE; ++j) {
       for (int i = 0; i < COMPONENT_SIZE; ++i) {
-        sum = 0.0;
-        for (int u = 0; u < COMPONENT_SIZE; ++u) {
-          for (int v = 0; v < COMPONENT_SIZE; ++v) {
-            Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
-            Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+        sum_sse = _mm_setzero_ps();
 
-            sum += Cu * Cv * _matrix[imageComponent][u][v] *
-                   cos((2 * i + 1) * u * M_PI / 16.0) *
-                   cos((2 * j + 1) * v * M_PI / 16.0);
+        for (int u = 0; u < COMPONENT_SIZE; u += 4) { //
+          以4个元素为一个处理单位
+          for (int v = 0; v < COMPONENT_SIZE; ++v) {
+            // 从_matrix加载数据
+            __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(
+                &_matrix[imageComponent][u][v]));
+            data = _mm_unpacklo_epi8(data, _mm_setzero_si128()); //
+            转换成16位
+
+            // 计算Cu, Cv和余弦值，需要将这些值转换为__m128类型以便使用
+            __m128 Cu_sse = _mm_set_ps1(u == 0 ? 1.0 / std::sqrt(2.0) : 1.0);
+            __m128 Cv_sse = _mm_set_ps1(v == 0 ? 1.0 / std::sqrt(2.0) : 1.0);
+            __m128 cos1 = _mm_set_ps1(std::cos((2 * i + 1) * u * M_PI / 16.0));
+            __m128 cos2 = _mm_set_ps1(std::cos((2 * j + 1) * v * M_PI / 16.0));
+
+            // 转换data为float
+            __m128 data_ps =
+                _mm_cvtepi32_ps(_mm_unpacklo_epi16(data, _mm_setzero_si128()));
+
+            // 执行计算
+            __m128 partial_sum = _mm_mul_ps(data_ps, Cu_sse);
+            partial_sum = _mm_mul_ps(partial_sum, Cv_sse);
+            partial_sum = _mm_mul_ps(partial_sum, cos1);
+            partial_sum = _mm_mul_ps(partial_sum, cos2);
+            sum_sse = _mm_add_ps(sum_sse, partial_sum);
           }
+        }
+
+        // 将累加的结果从SSE寄存器sum_sse转移到常规浮点数组sum_array中
+        _mm_storeu_ps(sum_array, sum_sse);
+
+        // 对sum_array中的结果进行后处理
+        float sum = 0.0;
+        for (int k = 0; k < 4; ++k) {
+          sum += sum_array[k];
         }
 
         _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
@@ -214,6 +253,41 @@ void MCU::startIDCT() {
     }
   }
 }
+#else
+void MCU::idctComponent(int imageComponent) {
+  float sum = 0.0, Cu = 0.0, Cv = 0.0;
+
+  for (int j = 0; j < COMPONENT_SIZE; ++j) {
+    for (int i = 0; i < COMPONENT_SIZE; ++i) {
+      sum = 0.0;
+      for (int u = 0; u < COMPONENT_SIZE; ++u) {
+        for (int v = 0; v < COMPONENT_SIZE; ++v) {
+          Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
+          Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+
+          sum += Cu * Cv * _matrix[imageComponent][u][v] *
+                 cos((2 * i + 1) * u * M_PI / 16.0) *
+                 cos((2 * j + 1) * v * M_PI / 16.0);
+        }
+      }
+
+      _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+    }
+  }
+}
+
+void MCU::startIDCT() {
+  vector<thread> threads;
+  // 先为每个图像分量创建线程
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    threads.push_back(thread(&MCU::idctComponent, this, imageComponent));
+
+  // 等待所有线程完成
+  for (thread &t : threads)
+    if (t.joinable())
+      t.join();
+}
+#endif
 
 /* 中心化*/
 void MCU::levelShift() {

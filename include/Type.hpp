@@ -17,7 +17,12 @@
 #include <sstream>
 #include <string.h>
 #include <string>
+#include <thread>
 #include <vector>
+
+#if defined(SSE)
+#include <immintrin.h>
+#endif
 
 using namespace std;
 
