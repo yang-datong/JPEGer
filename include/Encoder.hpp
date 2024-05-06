@@ -49,6 +49,7 @@ class Encoder {
   string VLIEncode(int value);
   void writeBitStream(const string &scanData, ofstream &outputFile);
   int encodeScanData(ofstream &outputFile);
+  int encodeScanData2(ofstream &outputFile);
 
   void printDCInfo(int HuffTableID, int category, int codeLen, string &value);
   void printZRLInfo(int HuffTableID, string &value, int symbol);

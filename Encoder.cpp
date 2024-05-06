@@ -62,7 +62,8 @@ int Encoder::startMakeMarker() {
   _dht->package(outputFile);
   _sos->package(outputFile);
 
-  encodeScanData(outputFile);
+  /* TODO encodeScanData还是有问题 <24-05-06 11:42:26, YangJing>  */
+  encodeScanData2(outputFile);
 
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));
@@ -176,59 +177,6 @@ int Encoder::encodeScanData(ofstream &outputFile) {
     return -1;
   }
 
-  // int8_t *Y = new int8_t[512 * 512];
-  // int8_t *U = new int8_t[512 * 512];
-  // int8_t *V = new int8_t[512 * 512];
-  // int aaa = 0;
-
-  //  for (int y = 0; y < _imgHeight; y += 8) {
-  //    for (int x = 0; x < _imgWidth; x += 8) {
-  //      UCompMatrices matrix;
-  //      int block[3][64];
-  //      for (int dy = 0; dy < 8; ++dy) {
-  //        for (int dx = 0; dx < 8; ++dx) {
-  //          int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
-  //          int block_offset = (dy * 8 + dx) * 3;
-  //
-  //          block[0][block_offset] = round(packedBuffer[offset]);
-  //          block[1][block_offset + 1] = round(packedBuffer[offset + 1]);
-  //          block[2][block_offset + 2] = round(packedBuffer[offset + 2]);
-  //
-  //          // Y[aaa] = matrix[0][dy][dx] - 128;
-  //          // U[aaa] = matrix[1][dy][dx] - 128;
-  //          // V[aaa] = matrix[2][dy][dx] - 128;
-  //          // aaa++;
-  //        }
-  //      }
-  //      _MCU.push_back(MCU(matrix, quantizationTables));
-  //    }
-  //  }
-
-  //  ofstream file("./demo.yuv");
-  //  file.write((char *)Y, 512 * 512);
-  //  file.write((char *)U, 512 * 512);
-  //  file.write((char *)V, 512 * 512);
-
-  // for (int y = 0; y < _imgHeight; y += 8) {
-  //   for (int x = 0; x < _imgWidth; x += 8) {
-  //     UCompMatrices matrix;
-  //     array<array<uint16_t, 64>, 3> block;
-  //     for (int dy = 0; dy < 8; ++dy) {
-  //       for (int dx = 0; dx < 8; ++dx) {
-  //         int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
-  //         int block_offset = (dy * 8 + dx) * 3;
-  //         block[0][block_offset] = packedBuffer[offset];
-  //         block[1][block_offset] = packedBuffer[offset + 1];
-  //         block[2][block_offset] = packedBuffer[offset + 2];
-  //       }
-  //     }
-  //     arrayToMatrixUseZigZag(block[0], matrix[0]);
-  //     arrayToMatrixUseZigZag(block[1], matrix[1]);
-  //     arrayToMatrixUseZigZag(block[2], matrix[2]);
-  //     _MCU.push_back(MCU(matrix, quantizationTables));
-  //   }
-  // }
-
   for (int y = 0; y < _imgHeight; y += 8) {
     for (int x = 0; x < _imgWidth; x += 8) {
       UCompMatrices matrix;
@@ -259,20 +207,9 @@ int Encoder::encodeScanData(ofstream &outputFile) {
 
       value += coeffDC == "-1" ? "0" : coeffDC;
       if (rle[imageComponent][1] == 0) {
-        scanData.append("0000000000000000");
-        // jpeg_write_bits(0, 2, 0, outputFile);
+        scanData.append("00");
       } else {
         scanData.append(value);
-        // bitset<16> bit(value);
-        // bitset<16> bit2(coeffDC);
-        // jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-        // jpeg_write_bits(bit2.to_ulong(), coeffDCLen, 0, outputFile);
-
-        //        printf(
-        //            "dc[0].code_word:%ld,dc[0].code_length:%ld,code:%ld,bit_num:%d\n",
-        //            bit.to_ulong(), value.length(), bit2.to_ulong(),
-        //            coeffDCLen);
-        /* Huffman编码后最长长度为16 */
       }
 
       if (category > 11) {
@@ -297,39 +234,14 @@ int Encoder::encodeScanData(ofstream &outputFile) {
         }
         string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
 
-        // if (symbol == 0xf0) {
-        //   // printZRLInfo(HuffTableID, value, symbol);
-        //   // bitset<16> bit(value);
-        //   // jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-        //   // printf("ac[0xf0].code_word:%ld,ac[0xf0].code_length:%ld\n",
-        //   //        bit.to_ulong(), value.length());
-        //   std::cout << "value:" << value << std::endl;
-        //   scanData.append("0000000000000000");
-        // } else if (symbol == 0x00) {
-        //   // printEOBInfo(HuffTableID, value, symbol);
-        //   scanData.append("1111111100000000");
-        //   // bitset<16> bit(value);
-        //   //  printf("ac[0xf0].code_word:%ld,ac[0xf0].code_length:%ld\n",
-        //   //         bit.to_ulong(), value.length());
-        //   // jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-        // } else {
-        //   // printCommonInfo(HuffTableID, value, symbol, zeroCount,
-        //   // coeffDCLen);
-
-        //  // bitset<16> bit(value);
-        //  // bitset<16> bit2(coeffAC);
-        //  //
-        //  //
-        //  printf("ac[run_size].code_word:%ld,ac[run_size].code_length:%ld,code:"
-        //  //                   "%ld,bit_num:%d\n",
-        //  //                   bit.to_ulong(), value.length(),
-        //  // bit2.to_ulong(),
-        //  //                   coeffACLen);
-
-        //  // jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-        //  // jpeg_write_bits(bit2.to_ulong(), coeffDCLen, 0, outputFile);
-        //  scanData.append(value);
-        //}
+        if (symbol == 0xf0) {
+          // printZRLInfo(HuffTableID, value, symbol);
+        } else if (symbol == 0x00) {
+          // printEOBInfo(HuffTableID, value, symbol);
+        } else {
+          // printCommonInfo(HuffTableID, value, symbol, zeroCount,
+          // coeffDCLen);
+        }
         //在Huffman编码后的数据中，你不会预设一个编码是0xFF，因为Huffman编码是根据数据的频率动态生成的，它不会固定地将某个值编码为0xFF。出现0xFF字节的情况是在你将Huffman编码后的比特流合并并以每8位分割成字节后可能发生的。比如ZRL和EOI也是这样，每个huffman编码按顺序读取都是唯一的。
         scanData.append(value);
       }
@@ -339,8 +251,139 @@ int Encoder::encodeScanData(ofstream &outputFile) {
       scanData.clear();
     }
   }
+  SAFE_DELETE_ARRAY(packedBuffer);
+  return 0;
+}
+
+int Encoder::encodeScanData2(ofstream &outputFile) {
+  uint8_t *packedBuffer = nullptr;
+
+  if (Image::sInputFileType == FileFormat::YUV) {
+    uint8_t *buffer = nullptr;
+    int bufferSize = 0;
+    if (Image::readYUVFile(_inputFilePath, buffer, bufferSize)) {
+      std::cerr << "\033[31mreadYUVFile failed" + _inputFilePath + " 033[0m"
+                << std::endl;
+      return -1;
+    }
+
+    /* YUV444p */
+    if (bufferSize != (_imgWidth * _imgHeight) * 3) {
+      std::cout << "Only support YUV444p" << std::endl;
+      return -1;
+    }
+
+    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
+    Image::YUV444PlanarToPacked(buffer, packedBuffer, _imgWidth, _imgHeight);
+    SAFE_DELETE_ARRAY(buffer);
+    bufferSize = 0;
+
+  } else if (Image::sInputFileType == FileFormat::BMP) {
+    File::BMP bmp;
+    bmp.BMPToYUV(_inputFilePath);
+    _imgWidth = bmp.getWidth();
+    _imgHeight = bmp.getHeight();
+    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
+    /* 走完这里的话，BMP对象会销毁，则会自动调用close函数，所以这里必须使用copy*/
+    memcpy(packedBuffer, bmp.getYUV444PackedBuffer(), bmp.getYUVSize());
+  }
+
+  if (packedBuffer == nullptr) {
+    std::cerr << "\033[31mFail to get packedBuffer\033[0m" << std::endl;
+    return -1;
+  }
+
+  mark::HuffmanTrees huffmanTree =
+      static_cast<mark::DHT *>(_dht)->getHuffmanTree();
+
+  vector<QuantizationTable> quantizationTables =
+      static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
+  if (quantizationTables.size() == 0 || quantizationTables[0].size() == 0 ||
+      quantizationTables[1].size() == 0) {
+    std::cerr << "\033[31mError -> quantizationTables.size\033[0m" << std::endl;
+    return -1;
+  }
+
+  for (int y = 0; y < _imgHeight; y += 8) {
+    for (int x = 0; x < _imgWidth; x += 8) {
+      UCompMatrices matrix;
+      for (int dy = 0; dy < 8; ++dy) {
+        for (int dx = 0; dx < 8; ++dx) {
+          int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
+          matrix[0][dy][dx] = packedBuffer[offset];
+          matrix[1][dy][dx] = packedBuffer[offset + 1];
+          matrix[2][dy][dx] = packedBuffer[offset + 2];
+        }
+      }
+      _MCU.push_back(MCU(matrix, quantizationTables));
+    }
+  }
+
+  string scanData;
+  for (int i = 0; i < (int)_MCU.size(); i++) {
+    auto mcu = _MCU[i];
+    mcu.startEncode();
+    RLE rle = mcu.getRLE();
+    for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
+      bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
+      string coeffDC = VLIEncode(rle[imageComponent][1]);
+      uint8_t coeffDCLen = coeffDC == "-1" ? 0 : coeffDC.length();
+      uint8_t &category = coeffDCLen;
+      string value = huffmanTree[HT_DC][HuffTableID].encode(category);
+      // printDCInfo(HuffTableID, category, value.length(), value);
+
+      if (rle[imageComponent][1] == 0) {
+        jpeg_write_bits(0, 2, 0, outputFile);
+      } else {
+        /* Huffman编码后最长长度为16 */
+        bitset<16> bit(value);
+        bitset<16> bit2(coeffDC);
+        jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+        jpeg_write_bits(bit2.to_ulong(), coeffDCLen, 0, outputFile);
+      }
+      if (category > 11) {
+        std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
+                  << std::endl;
+        return -1;
+      }
+      for (int i = 2; i <= (int)rle[imageComponent].size() - 2; i += 2) {
+        uint8_t zeroCount = rle[imageComponent][i];
+
+        uint8_t symbol;
+        string coeffAC;
+        uint8_t coeffACLen;
+        if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
+          symbol = 0x00;
+        else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
+          symbol = 0xf0;
+        else {
+          coeffAC = VLIEncode(rle[imageComponent][i + 1]);
+          coeffACLen = coeffAC.length();
+          symbol = combineOneByte(zeroCount, coeffACLen);
+        }
+        string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
+
+        if (symbol == 0xf0) {
+          // printZRLInfo(HuffTableID, value, symbol);
+          bitset<16> bit(value);
+          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+        } else if (symbol == 0x00) {
+          // printEOBInfo(HuffTableID, value, symbol);
+          bitset<16> bit(value);
+          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+        } else {
+          // printCommonInfo(HuffTableID, value, symbol, zeroCount,
+          // coeffDCLen);
+          bitset<16> bit(value);
+          bitset<16> bit2(coeffAC);
+          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+          jpeg_write_bits(bit2.to_ulong(), coeffACLen, 0, outputFile);
+        }
+      }
+    }
+  }
   // 清除缓存
-  // jpeg_write_bits(0, 0, 1, outputFile);
+  jpeg_write_bits(0, 0, 1, outputFile);
   SAFE_DELETE_ARRAY(packedBuffer);
   return 0;
 }

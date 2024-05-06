@@ -38,6 +38,68 @@ void MCU::startDecode() {
     YUVToRGB();
 }
 
+void MCU::fillACRLE(int imageComponent) {
+  //   AC ,RLE编码
+  // std::cout << "AC:";
+  int zeroCount = 0;
+  for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
+    int16_t AC = _zzOrder[indexAC];
+    //  std::cout << AC << ",";
+    if (AC == 0) {
+      zeroCount++;
+      if (zeroCount == 16) { // 如果已经数了15个零，遇到第16个零
+        _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
+        _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
+        zeroCount = 0;
+      }
+    } else {
+      _rle[imageComponent].push_back(zeroCount);
+      _rle[imageComponent].push_back(AC);
+      zeroCount = 0;
+    }
+    if (indexAC == MCU_UNIT_SIZE - 1 && zeroCount > 0) {
+      // 如果是最后一个系数并且之前有零
+      _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
+      _rle[imageComponent].push_back(0x0); // Minor byte: EOB
+      zeroCount = 0;                       // 重置0值的计数器
+    }
+  }
+  // std::cout << std::endl;
+}
+
+/* 这个方式的输出jpeg会更加小 */
+void MCU::fillACRLE2(int imageComponent) {
+  int last_not_zero_cnt = -1;
+  for (int i = 63; i > 0; i--) {
+    if (_zzOrder[i] != 0) {
+      last_not_zero_cnt = i;
+      break;
+    }
+  }
+
+  int zero_cnt = -1;
+  for (int i = 1; i <= last_not_zero_cnt; i++) {
+    zero_cnt = 0;
+    while (_zzOrder[i] == 0) {
+      zero_cnt++;
+      i++;
+      if (zero_cnt == 16) {
+        _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
+        _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
+        zero_cnt = 0;
+      }
+    }
+    _rle[imageComponent].push_back(zero_cnt);
+    _rle[imageComponent].push_back(_zzOrder[i]);
+    zero_cnt = 0;
+  }
+  if (last_not_zero_cnt != 63) {
+    _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
+    _rle[imageComponent].push_back(0x0); // Minor byte: EOB
+    zero_cnt = 0;                        // 重置0值的计数器
+  }
+}
+
 void MCU::encodeACandDC() {
   for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
     _zzOrder = {0};
@@ -64,33 +126,9 @@ void MCU::encodeACandDC() {
     // }
 
     // printZZOrder();
-    //   AC ,RLE编码
-    int zeroCount = 0;
-    // std::cout << "AC:";
-    for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
-      int16_t AC = _zzOrder[indexAC];
-      //  std::cout << AC << ",";
-      if (AC == 0) {
-        zeroCount++;
-        if (zeroCount == 16) { // 如果已经数了15个零，遇到第16个零
-          _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
-          _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
-          zeroCount = 0;
-        }
-      } else {
-        _rle[imageComponent].push_back(zeroCount);
-        _rle[imageComponent].push_back(AC);
-        zeroCount = 0;
-      }
-      if (indexAC == MCU_UNIT_SIZE - 1 && zeroCount > 0) {
-        // 如果是最后一个系数并且之前有零
-        _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
-        _rle[imageComponent].push_back(0x0); // Minor byte: EOB
-        zeroCount = 0;                       // 重置0值的计数器
-      }
-    }
-    // std::cout << std::endl;
-    // printRLE();
+    fillACRLE(imageComponent);
+    // fillACRLE2(imageComponent);
+    //  printRLE();
   }
 }
 

@@ -35,6 +35,8 @@ class MCU {
   void levelShift();
   void performLevelShift();
   void YUVToRGB();
+  void fillACRLE(int imageComponent);
+  void fillACRLE2(int imageComponent);
 
   void printZZOrder();
   void printMatrix();
