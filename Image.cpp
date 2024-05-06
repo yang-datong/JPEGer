@@ -136,9 +136,9 @@ int Image::readFile(const string &filePath, uint8_t *&buf, int &bufSize) {
     return -1;
 
   /* 适当调整，读取一个17M的文件要花近1分钟 */
-  const int readBufSize = 1024;
+  // const int readBufSize = 1024;
   /* 适当调整，读取一个17M的文件要花近1秒 */
-  // const int readBufSize = 1024 * 1024;
+  const int readBufSize = 1024 * 1024;
   bool isRead = false;
 
   uint8_t *fileBuffer = new uint8_t[readBufSize];
