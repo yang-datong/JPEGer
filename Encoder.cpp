@@ -49,25 +49,42 @@ Encoder::~Encoder() {
 
 int Encoder::startMakeMarker() {
   ofstream outputFile(_outputFilePath, ios_base::binary);
-  std::cout << "_inputFilePath:" << _inputFilePath << std::endl;
-  std::cout << "_outputFilePath:" << _outputFilePath << std::endl;
 
+  /* TODO YangJing 感觉这样写不太好 <24-05-06 15:01:01> */
+  mark::SOF0 *sof0 = static_cast<mark::SOF0 *>(_sof0);
+  sof0->setImageWidth(_imgWidth);
+  sof0->setImageHeight(_imgHeight);
+
+  std::cout << "-------------------------------------------- startMakeMarker "
+               "--------------------------------------------"
+            << std::endl;
+  std::cout << "Start OF Image" << std::endl;
   uint8_t SOI[2] = {0xff, JFIF::SOI};
   outputFile.write((const char *)SOI, sizeof(SOI));
 
+  std::cout << "Decode Application-specific" << std::endl;
   _app0->package(outputFile);
+  std::cout << "Comment" << std::endl;
   _com->package(outputFile);
+  std::cout << "Define Quantization Table(s)" << std::endl;
   _dqt->package(outputFile);
+  std::cout << "Start Of Frame 0" << std::endl;
   _sof0->package(outputFile);
+  std::cout << "Define Huffman Table(s)" << std::endl;
   _dht->package(outputFile);
+  std::cout << "Start of Scan" << std::endl;
   _sos->package(outputFile);
 
-  /* TODO encodeScanData还是有问题 <24-05-06 11:42:26, YangJing>  */
-  encodeScanData2(outputFile);
+  std::cout << "-------------------------------------------- encodeScanData "
+               "--------------------------------------------"
+            << std::endl;
+  encodeScanData(outputFile);
 
+  std::cout << "End OF Image" << std::endl;
   uint8_t EOI[2] = {0xff, JFIF::EOI};
   outputFile.write((const char *)EOI, sizeof(EOI));
 
+  cout << "JPEG image data write to file: " + _outputFilePath << std::endl;
   outputFile.close();
   return 0;
 }
@@ -192,6 +209,15 @@ int Encoder::encodeScanData(ofstream &outputFile) {
     }
   }
 
+  //_encodeScanData(huffmanTree, outputFile);
+  _encodeScanData2(huffmanTree, outputFile);
+
+  SAFE_DELETE_ARRAY(packedBuffer);
+  return 0;
+}
+
+int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
+                             ofstream &outputFile) {
   string scanData;
   for (int i = 0; i < (int)_MCU.size(); i++) {
     auto mcu = _MCU[i];
@@ -206,23 +232,20 @@ int Encoder::encodeScanData(ofstream &outputFile) {
       // printDCInfo(HuffTableID, category, value.length(), value);
 
       value += coeffDC == "-1" ? "0" : coeffDC;
-      if (rle[imageComponent][1] == 0) {
-        scanData.append("00");
-      } else {
-        scanData.append(value);
-      }
+      rle[imageComponent][1] == 0 ? "00" : value;
+      scanData.append(value);
 
-      if (category > 11) {
+      if (category > 11)
         std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
                   << std::endl;
-        return -1;
-      }
+
       for (int i = 2; i <= (int)rle[imageComponent].size() - 2; i += 2) {
         uint8_t zeroCount = rle[imageComponent][i];
 
         uint8_t symbol;
         string coeffAC;
         uint8_t coeffACLen;
+
         if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
           symbol = 0x00;
         else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
@@ -234,92 +257,26 @@ int Encoder::encodeScanData(ofstream &outputFile) {
         }
         string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
 
-        if (symbol == 0xf0) {
-          // printZRLInfo(HuffTableID, value, symbol);
-        } else if (symbol == 0x00) {
-          // printEOBInfo(HuffTableID, value, symbol);
-        } else {
-          // printCommonInfo(HuffTableID, value, symbol, zeroCount,
-          // coeffDCLen);
-        }
+        // if (symbol == 0xf0)
+        //   printZRLInfo(HuffTableID, value, symbol);
+        // else if (symbol == 0x00)
+        //   printEOBInfo(HuffTableID, value, symbol);
+        // else
+        //   printCommonInfo(HuffTableID, value, symbol, zeroCount, coeffDCLen);
+
         //在Huffman编码后的数据中，你不会预设一个编码是0xFF，因为Huffman编码是根据数据的频率动态生成的，它不会固定地将某个值编码为0xFF。出现0xFF字节的情况是在你将Huffman编码后的比特流合并并以每8位分割成字节后可能发生的。比如ZRL和EOI也是这样，每个huffman编码按顺序读取都是唯一的。
         scanData.append(value);
       }
-
-      /*每个分量编码并写入文件的操作是分开进行的，而不是等到所有分量都编码完成后再合并写入。这是因为JPEG文件是按照一定的结构组织的，其中每个分量的数据在文件中通常有明确的开始和结束标示，所以它们是分别处理的。*/
+      /*每个分量编码并写入文件的操作是分开进行的，而不是等到所有分量都编码完成后再合并写入。因为JPEG文件是按照一定的结构组织的，其中每个分量的数据在文件中通常有明确的开始和结束标示，所以它们是分别处理的*/
       writeBitStream(scanData, outputFile);
       scanData.clear();
     }
   }
-  SAFE_DELETE_ARRAY(packedBuffer);
   return 0;
 }
 
-int Encoder::encodeScanData2(ofstream &outputFile) {
-  uint8_t *packedBuffer = nullptr;
-
-  if (Image::sInputFileType == FileFormat::YUV) {
-    uint8_t *buffer = nullptr;
-    int bufferSize = 0;
-    if (Image::readYUVFile(_inputFilePath, buffer, bufferSize)) {
-      std::cerr << "\033[31mreadYUVFile failed" + _inputFilePath + " 033[0m"
-                << std::endl;
-      return -1;
-    }
-
-    /* YUV444p */
-    if (bufferSize != (_imgWidth * _imgHeight) * 3) {
-      std::cout << "Only support YUV444p" << std::endl;
-      return -1;
-    }
-
-    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
-    Image::YUV444PlanarToPacked(buffer, packedBuffer, _imgWidth, _imgHeight);
-    SAFE_DELETE_ARRAY(buffer);
-    bufferSize = 0;
-
-  } else if (Image::sInputFileType == FileFormat::BMP) {
-    File::BMP bmp;
-    bmp.BMPToYUV(_inputFilePath);
-    _imgWidth = bmp.getWidth();
-    _imgHeight = bmp.getHeight();
-    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
-    /* 走完这里的话，BMP对象会销毁，则会自动调用close函数，所以这里必须使用copy*/
-    memcpy(packedBuffer, bmp.getYUV444PackedBuffer(), bmp.getYUVSize());
-  }
-
-  if (packedBuffer == nullptr) {
-    std::cerr << "\033[31mFail to get packedBuffer\033[0m" << std::endl;
-    return -1;
-  }
-
-  mark::HuffmanTrees huffmanTree =
-      static_cast<mark::DHT *>(_dht)->getHuffmanTree();
-
-  vector<QuantizationTable> quantizationTables =
-      static_cast<mark::DQT *>(_dqt)->getQuantizationTables();
-  if (quantizationTables.size() == 0 || quantizationTables[0].size() == 0 ||
-      quantizationTables[1].size() == 0) {
-    std::cerr << "\033[31mError -> quantizationTables.size\033[0m" << std::endl;
-    return -1;
-  }
-
-  for (int y = 0; y < _imgHeight; y += 8) {
-    for (int x = 0; x < _imgWidth; x += 8) {
-      UCompMatrices matrix;
-      for (int dy = 0; dy < 8; ++dy) {
-        for (int dx = 0; dx < 8; ++dx) {
-          int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
-          matrix[0][dy][dx] = packedBuffer[offset];
-          matrix[1][dy][dx] = packedBuffer[offset + 1];
-          matrix[2][dy][dx] = packedBuffer[offset + 2];
-        }
-      }
-      _MCU.push_back(MCU(matrix, quantizationTables));
-    }
-  }
-
-  string scanData;
+int Encoder::_encodeScanData2(mark::HuffmanTrees huffmanTree,
+                              ofstream &outputFile) {
   for (int i = 0; i < (int)_MCU.size(); i++) {
     auto mcu = _MCU[i];
     mcu.startEncode();
@@ -332,15 +289,13 @@ int Encoder::encodeScanData2(ofstream &outputFile) {
       string value = huffmanTree[HT_DC][HuffTableID].encode(category);
       // printDCInfo(HuffTableID, category, value.length(), value);
 
-      if (rle[imageComponent][1] == 0) {
-        jpeg_write_bits(0, 2, 0, outputFile);
-      } else {
-        /* Huffman编码后最长长度为16 */
-        bitset<16> bit(value);
-        bitset<16> bit2(coeffDC);
-        jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-        jpeg_write_bits(bit2.to_ulong(), coeffDCLen, 0, outputFile);
-      }
+      /* Huffman编码后最长长度为16 */
+      jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
+                      outputFile);
+      if (rle[imageComponent][1] != 0)
+        jpeg_write_bits(bitset<16>(coeffDC).to_ulong(), coeffDCLen, 0,
+                        outputFile);
+
       if (category > 11) {
         std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
                   << std::endl;
@@ -352,9 +307,9 @@ int Encoder::encodeScanData2(ofstream &outputFile) {
         uint8_t symbol;
         string coeffAC;
         uint8_t coeffACLen;
-        if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
+        if (zeroCount == 0 && rle[imageComponent][i + 1] == 0) {
           symbol = 0x00;
-        else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
+        } else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
           symbol = 0xf0;
         else {
           coeffAC = VLIEncode(rle[imageComponent][i + 1]);
@@ -365,26 +320,57 @@ int Encoder::encodeScanData2(ofstream &outputFile) {
 
         if (symbol == 0xf0) {
           // printZRLInfo(HuffTableID, value, symbol);
-          bitset<16> bit(value);
-          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
+                          outputFile);
         } else if (symbol == 0x00) {
           // printEOBInfo(HuffTableID, value, symbol);
-          bitset<16> bit(value);
-          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
+          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
+                          outputFile);
         } else {
           // printCommonInfo(HuffTableID, value, symbol, zeroCount,
           // coeffDCLen);
-          bitset<16> bit(value);
-          bitset<16> bit2(coeffAC);
-          jpeg_write_bits(bit.to_ulong(), value.length(), 0, outputFile);
-          jpeg_write_bits(bit2.to_ulong(), coeffACLen, 0, outputFile);
+          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
+                          outputFile);
+          jpeg_write_bits(bitset<16>(coeffAC).to_ulong(), coeffACLen, 0,
+                          outputFile);
         }
       }
     }
   }
   // 清除缓存
   jpeg_write_bits(0, 0, 1, outputFile);
-  SAFE_DELETE_ARRAY(packedBuffer);
+  return 0;
+}
+
+int32_t Encoder::jpeg_write_bits(uint32_t data, int32_t len, int32_t flush,
+                                 ofstream &outputFile) {
+  static uint32_t bit_ptr = 0; // 与平时阅读习惯相反，最高位计为0，最低位计为31
+  static uint32_t bitbuf = 0x00000000;
+  uint8_t w = 0x00;
+
+  bitbuf |= data << (32 - bit_ptr - len);
+  bit_ptr += len;
+
+  while (bit_ptr >= 8) {
+    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
+    jpeg_write_u8(w, outputFile);
+    if (w == 0xFF) {
+      jpeg_write_u8(0x00, outputFile);
+    }
+    bitbuf <<= 8;
+    bit_ptr -= 8;
+  }
+
+  if (flush) {
+    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
+    jpeg_write_u8(w, outputFile);
+  }
+  return 0;
+}
+
+int32_t Encoder::jpeg_write_u8(uint8_t data, ofstream &outputFile) {
+  uint8_t wd = data;
+  outputFile.write((char *)&wd, 1);
   return 0;
 }
 
@@ -425,36 +411,4 @@ void Encoder::printCommonInfo(int HuffTableID, string &value, int symbol,
             << ", Code Length:" << value.length() << ", Code word:" << value
             << ", " << (int)symbol << " -encode-> " << value << std::endl;
   std::cout << "}" << std::endl;
-}
-
-int32_t Encoder::jpeg_write_bits(uint32_t data, int32_t len, int32_t flush,
-                                 ofstream &outputFile) {
-  static uint32_t bit_ptr = 0; // 与平时阅读习惯相反，最高位计为0，最低位计为31
-  static uint32_t bitbuf = 0x00000000;
-  uint8_t w = 0x00;
-
-  bitbuf |= data << (32 - bit_ptr - len);
-  bit_ptr += len;
-
-  while (bit_ptr >= 8) {
-    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
-    jpeg_write_u8(w, outputFile);
-    if (w == 0xFF) {
-      jpeg_write_u8(0x00, outputFile);
-    }
-    bitbuf <<= 8;
-    bit_ptr -= 8;
-  }
-
-  if (flush) {
-    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
-    jpeg_write_u8(w, outputFile);
-  }
-  return 0;
-}
-
-int32_t Encoder::jpeg_write_u8(uint8_t data, ofstream &outputFile) {
-  uint8_t wd = data;
-  outputFile.write((char *)&wd, 1);
-  return 0;
 }

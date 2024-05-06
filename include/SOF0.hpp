@@ -21,11 +21,17 @@ typedef struct __attribute__((packed)) _SOF0 {
 } SOF0Header;
 
 class SOF0 : public Marker {
+ private:
+  int _imgWidth = 0;
+  int _imgHeight = 0;
+
  public:
   SOF0Header header;
   ImageComponent *imageComponent = nullptr;
   uint16_t getimgWidth() { return header.imgWidth; }
   uint16_t getimgHeight() { return header.imgHeight; }
+  void setImageWidth(int imgWidth) { this->_imgWidth = imgWidth; }
+  void setImageHeight(int imgHeight) { this->_imgHeight = imgHeight; }
   int parse(int index, uint8_t *buf, int bufSize) override;
   int package(ofstream &outputFile) override;
 };

@@ -83,8 +83,8 @@ int Image::outputToYUVFile(const string &outputFileName) {
 
   cout << "Raw image data dumped to file: " + outputFileName +
               " `ffplay -video_size "
-       << _imgWidth << "x" << _imgHeight << " -pixel_format yuv444p  "
-       << outputFileName << std::endl;
+       << _imgWidth << "x" << _imgHeight << " -pixel_format yuv444p "
+       << outputFileName + "`" << std::endl;
   outputFile.close();
   return 0;
 }

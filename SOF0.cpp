@@ -57,8 +57,8 @@ int mark::SOF0::package(ofstream &outputFile) {
 
   header.len = sizeof(header) - 2;
   header.precision = 8;
-  header.imgWidth = htons(512);
-  header.imgHeight = htons(512);
+  header.imgWidth = htons(_imgWidth);
+  header.imgHeight = htons(_imgHeight);
   header.imageComponentCount = comCount;
   if (comCount > 0)
     header.len = htons(header.len + comCount * sizeof(ImageComponent));

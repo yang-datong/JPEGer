@@ -69,34 +69,34 @@ void MCU::fillACRLE(int imageComponent) {
 
 /* 这个方式的输出jpeg会更加小 */
 void MCU::fillACRLE2(int imageComponent) {
-  int last_not_zero_cnt = -1;
-  for (int i = 63; i > 0; i--) {
-    if (_zzOrder[i] != 0) {
-      last_not_zero_cnt = i;
+  int lastNotZeroCount = 0;
+  for (int indexAC = MCU_UNIT_SIZE - 1; indexAC > 0; indexAC--) {
+    if (_zzOrder[indexAC] != 0) {
+      lastNotZeroCount = indexAC;
       break;
     }
   }
 
-  int zero_cnt = -1;
-  for (int i = 1; i <= last_not_zero_cnt; i++) {
-    zero_cnt = 0;
-    while (_zzOrder[i] == 0) {
-      zero_cnt++;
-      i++;
-      if (zero_cnt == 16) {
+  int zeroCount = -1;
+  for (int indexAC = 1; indexAC <= lastNotZeroCount; indexAC++) {
+    zeroCount = 0;
+    while (_zzOrder[indexAC] == 0) {
+      zeroCount++;
+      indexAC++;
+      if (zeroCount == 16) {
         _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
         _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
-        zero_cnt = 0;
+        zeroCount = 0;
       }
     }
-    _rle[imageComponent].push_back(zero_cnt);
-    _rle[imageComponent].push_back(_zzOrder[i]);
-    zero_cnt = 0;
+    _rle[imageComponent].push_back(zeroCount);
+    _rle[imageComponent].push_back(_zzOrder[indexAC]);
+    zeroCount = 0;
   }
-  if (last_not_zero_cnt != 63) {
+  if (lastNotZeroCount != MCU_UNIT_SIZE - 1) {
     _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
     _rle[imageComponent].push_back(0x0); // Minor byte: EOB
-    zero_cnt = 0;                        // 重置0值的计数器
+    zeroCount = 0;                       // 重置0值的计数器
   }
 }
 
@@ -126,8 +126,8 @@ void MCU::encodeACandDC() {
     // }
 
     // printZZOrder();
-    fillACRLE(imageComponent);
-    // fillACRLE2(imageComponent);
+    // fillACRLE(imageComponent);
+    fillACRLE2(imageComponent);
     //  printRLE();
   }
 }
