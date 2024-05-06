@@ -23,6 +23,7 @@ int encode(int inpuType) {
     }
   }
   Encoder encoder(inputFileName, outputFileName, inpuType, imgWidth, imgHeight);
+  ret = encoder.readFileBuferToYUV444Packed();
   ret = encoder.startMakeMarker();
   RET(ret, "Failed for startMakeMarker()")
   return ret;
@@ -99,7 +100,8 @@ inline void use(char *me) {
                       \n  -i, --input          Encode/Decode input file\
                       \n  -o, --output         Encode/Decode output file\
                       \n  -s, --video_size     Encode input file size as: [-s 1920x1080]\
-                      \n";
+                      \n\n Decode: -i *.jpg -o [*.yuv|*.ppm]\
+                      \n Encode: -i [*.yuv|*.bmp] -o *.jpg\n";
 }
 
 void checkArgument(int argc, char *argv[]) {

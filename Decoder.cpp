@@ -24,7 +24,6 @@ Decoder::Decoder(const string &filePath, const int outputTypeFile)
 Decoder::~Decoder() {
   _bufSize = 0;
   SAFE_DELETE_ARRAY(_buf);
-
   SAFE_DELETE(_app0);
   SAFE_DELETE(_com);
   SAFE_DELETE(_dqt);

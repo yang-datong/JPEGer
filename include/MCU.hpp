@@ -34,7 +34,6 @@ class MCU {
   void startIDCT();
   void levelShift();
   void performLevelShift();
-  void YUVToRGB();
   void fillACRLE(int imageComponent);
   void fillACRLE2(int imageComponent);
 

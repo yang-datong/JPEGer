@@ -35,7 +35,7 @@ void MCU::startDecode() {
   performLevelShift();
   // printUmatrix();
   if (Image::sOutputFileType != FileFormat::YUV)
-    YUVToRGB();
+    Image::YUVToRGB(_Umatrix);
 }
 
 void MCU::fillACRLE(int imageComponent) {
@@ -232,30 +232,6 @@ void MCU::performLevelShift() {
             roundl(_idctCoeffs[imageComponent][y][x]) + 128;
   // 1. 使用 roundl 函数对IDCT变换后的系数进行四舍五入到最近的整数。
   // 2. 向每个四舍五入后的系数加上128，以执行反中心化处理。
-}
-
-void MCU::YUVToRGB() {
-  /* YUV444 packed 表示为三个字节一个像素，而矩阵是8x8个像素，故有8x8x3个字节*/
-  for (int y = 0; y < COMPONENT_SIZE; ++y) {
-    for (int x = 0; x < COMPONENT_SIZE; ++x) {
-      float Y = _Umatrix[0][y][x];
-      float Cb = _Umatrix[1][y][x];
-      float Cr = _Umatrix[2][y][x];
-
-      int R = (int)floor(Y + 1.402 * (1.0 * Cr - 128));
-      int G = (int)floor(Y - 0.34414 * (1.0 * Cb - 128) -
-                         0.71414 * (1.0 * Cr - 128));
-      int B = (int)floor(Y + 1.772 * (1.0 * Cb - 128));
-
-      R = max(0, min(R, 255));
-      G = max(0, min(G, 255));
-      B = max(0, min(B, 255));
-
-      _Umatrix[0][y][x] = R;
-      _Umatrix[1][y][x] = G;
-      _Umatrix[2][y][x] = B;
-    }
-  }
 }
 
 void MCU::printUmatrix() {

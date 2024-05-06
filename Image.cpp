@@ -1,5 +1,6 @@
 #include "Image.hpp"
 #include "Type.hpp"
+#include <cstdint>
 #include <fstream>
 
 int Image::sOutputFileType = FileFormat::PPM;
@@ -184,5 +185,70 @@ int Image::YUV444PlanarToPacked(uint8_t *planarBuffer, uint8_t *packedBuffer,
     *packedBuffer++ = bufferU[i]; // U
     *packedBuffer++ = bufferV[i]; // V
   }
+  return 0;
+}
+
+/* U开头表示matrix内的元素均为无符号整数或uint8_t,uint16_t,uint32_t */
+int Image::YUVToRGB(UCompMatrices &Umatrix) {
+  /* YUV444 packed 表示为三个字节一个像素，而矩阵是8x8个像素，故有8x8x3个字节*/
+  for (int y = 0; y < COMPONENT_SIZE; ++y) {
+    for (int x = 0; x < COMPONENT_SIZE; ++x) {
+      float Y = Umatrix[0][y][x];
+      float Cb = Umatrix[1][y][x];
+      float Cr = Umatrix[2][y][x];
+
+      int R = (int)floor(Y + 1.402 * (1.0 * Cr - 128));
+      int G = (int)floor(Y - 0.34414 * (1.0 * Cb - 128) -
+                         0.71414 * (1.0 * Cr - 128));
+      int B = (int)floor(Y + 1.772 * (1.0 * Cb - 128));
+
+      R = max(0, min(R, 255));
+      G = max(0, min(G, 255));
+      B = max(0, min(B, 255));
+
+      Umatrix[0][y][x] = R;
+      Umatrix[1][y][x] = G;
+      Umatrix[2][y][x] = B;
+    }
+  }
+  return 0;
+}
+
+int Image::RGBToYUV(uint8_t *rgbBuffer, int width, int height, int &YUVSize,
+                    uint8_t *&yuv444PlanarBuffer,
+                    uint8_t *&yuv444PackedBuffer) {
+  YUVSize = height * width * 3;
+  int size = height * width;
+  uint8_t *_Y = nullptr, *_U = nullptr, *_V = nullptr;
+  _Y = new uint8_t[size];
+  _U = new uint8_t[size];
+  _V = new uint8_t[size];
+  int offset = -1;
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      offset = i * height + j;
+      uint8_t r = rgbBuffer[offset * 3];
+      uint8_t g = rgbBuffer[offset * 3 + 1];
+      uint8_t b = rgbBuffer[offset * 3 + 2];
+
+      _Y[offset] = round(0.299f * r + 0.587f * g + 0.114f * b);
+      _U[offset] = round(-0.1687f * r - 0.3313f * g + 0.5f * b + 128);
+      _V[offset] = round(0.5f * r - 0.4187f * g - 0.0813f * b + 128);
+    }
+  }
+  yuv444PlanarBuffer = new uint8_t[YUVSize];
+  memcpy(yuv444PlanarBuffer, _Y, size);
+  memcpy(yuv444PlanarBuffer + size, _U, size);
+  memcpy(yuv444PlanarBuffer + size * 2, _V, size);
+
+  yuv444PackedBuffer = new uint8_t[YUVSize];
+  Image::YUV444PlanarToPacked(yuv444PlanarBuffer, yuv444PackedBuffer, width,
+                              height);
+  delete[] _Y;
+  _Y = nullptr;
+  delete[] _U;
+  _U = nullptr;
+  delete[] _V;
+  _V = nullptr;
   return 0;
 }

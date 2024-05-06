@@ -26,6 +26,8 @@ class Encoder {
   int startMakeMarker();
   int startEncode();
   int createImage(const string ouputFileName);
+  /* 读取用于编码的数据，如果不是YUV文件则转码为YUV，然后再读取YUV数据，同时初始化宽、高*/
+  int readFileBuferToYUV444Packed();
 
  private:
   ifstream _file;
@@ -34,7 +36,7 @@ class Encoder {
   int _imgWidth = 0;
   int _imgHeight = 0;
 
-  uint8_t *_buf = nullptr;
+  uint8_t *_packedBuffer = nullptr;
   int _bufSize = 0;
   vector<MCU> _MCU;
 
@@ -46,9 +48,9 @@ class Encoder {
   Marker *_sos;
   Image _image;
 
+  int encodeScanData(ofstream &outputFile);
   string VLIEncode(int value);
   void writeBitStream(const string &scanData, ofstream &outputFile);
-  int encodeScanData(ofstream &outputFile);
 
   int _encodeScanData(mark::HuffmanTrees huffmanTree, ofstream &outputFile);
   int _encodeScanData2(mark::HuffmanTrees huffmanTree, ofstream &outputFile);

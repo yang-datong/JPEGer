@@ -38,7 +38,6 @@ class BMP {
   int _height = 0;
   uint8_t *_rgbBuffer = nullptr;
   int _rgbBufferSize = 0;
-  uint8_t *_Y = nullptr, *_U = nullptr, *_V = nullptr;
   uint8_t *_yuv444PackedBuffer = nullptr;
   uint8_t *_yuv444PlanarBuffer = nullptr;
   int _YUVSize = 0;
@@ -54,10 +53,7 @@ class BMP {
   int getWidth() { return _width; }
   int getHeight() { return _height; }
 
-  int RGBToYUV();
-
   int RGBToBMP(string &rgbFilePath, int width, int height, string &bmpFilePath);
-
   int BMPToRBG(string &bmpFilePath, string rgbFilePath = "");
   int BMPToYUV(string &bmpFilePath, string yuvFilePath = "");
   int close();

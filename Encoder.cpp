@@ -32,19 +32,57 @@ Encoder::Encoder(const string &inputFilePath, const string &outputFilePath,
                  const int imgHeight)
     : Encoder(inputFilePath, outputFilePath) {
   Image::sInputFileType = inputTypeFile;
-  this->_imgWidth = imgWidth;
-  this->_imgHeight = imgHeight;
+  if (imgWidth > 0 && imgHeight > 0) {
+    this->_imgWidth = imgWidth;
+    this->_imgHeight = imgHeight;
+  }
 }
 
 Encoder::~Encoder() {
   _bufSize = 0;
-  SAFE_DELETE_ARRAY(_buf);
+  SAFE_DELETE_ARRAY(_packedBuffer);
   SAFE_DELETE(_app0);
   SAFE_DELETE(_com);
   SAFE_DELETE(_dqt);
   SAFE_DELETE(_sof0);
   SAFE_DELETE(_dht);
   SAFE_DELETE(_sos);
+}
+
+int Encoder::readFileBuferToYUV444Packed() {
+  if (Image::sInputFileType == FileFormat::YUV) {
+    uint8_t *buffer = nullptr;
+    if (Image::readYUVFile(_inputFilePath, buffer, _bufSize)) {
+      std::cerr << "\033[31mreadYUVFile failed " + _inputFilePath + " \033[0m"
+                << std::endl;
+      return -1;
+    }
+
+    /* YUV444p */
+    if (_bufSize != (_imgWidth * _imgHeight) * 3) {
+      std::cout << "Only support YUV444p" << std::endl;
+      return -1;
+    }
+
+    _packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
+    Image::YUV444PlanarToPacked(buffer, _packedBuffer, _imgWidth, _imgHeight);
+    SAFE_DELETE_ARRAY(buffer);
+
+  } else if (Image::sInputFileType == FileFormat::BMP) {
+    File::BMP bmp;
+    bmp.BMPToYUV(_inputFilePath);
+    _imgWidth = bmp.getWidth();
+    _imgHeight = bmp.getHeight();
+    _packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
+    /* 走完这里的话，BMP对象会销毁，则会自动调用close函数，所以这里必须使用copy*/
+    memcpy(_packedBuffer, bmp.getYUV444PackedBuffer(), bmp.getYUVSize());
+  }
+
+  if (_packedBuffer == nullptr) {
+    std::cerr << "\033[31mFail to get packedBuffer\033[0m" << std::endl;
+    return -1;
+  }
+  return 0;
 }
 
 int Encoder::startMakeMarker() {
@@ -146,43 +184,6 @@ string Encoder::VLIEncode(int value) {
 }
 
 int Encoder::encodeScanData(ofstream &outputFile) {
-  uint8_t *packedBuffer = nullptr;
-
-  if (Image::sInputFileType == FileFormat::YUV) {
-    uint8_t *buffer = nullptr;
-    int bufferSize = 0;
-    if (Image::readYUVFile(_inputFilePath, buffer, bufferSize)) {
-      std::cerr << "\033[31mreadYUVFile failed" + _inputFilePath + " 033[0m"
-                << std::endl;
-      return -1;
-    }
-
-    /* YUV444p */
-    if (bufferSize != (_imgWidth * _imgHeight) * 3) {
-      std::cout << "Only support YUV444p" << std::endl;
-      return -1;
-    }
-
-    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
-    Image::YUV444PlanarToPacked(buffer, packedBuffer, _imgWidth, _imgHeight);
-    SAFE_DELETE_ARRAY(buffer);
-    bufferSize = 0;
-
-  } else if (Image::sInputFileType == FileFormat::BMP) {
-    File::BMP bmp;
-    bmp.BMPToYUV(_inputFilePath);
-    _imgWidth = bmp.getWidth();
-    _imgHeight = bmp.getHeight();
-    packedBuffer = new uint8_t[_imgWidth * _imgHeight * 3];
-    /* 走完这里的话，BMP对象会销毁，则会自动调用close函数，所以这里必须使用copy*/
-    memcpy(packedBuffer, bmp.getYUV444PackedBuffer(), bmp.getYUVSize());
-  }
-
-  if (packedBuffer == nullptr) {
-    std::cerr << "\033[31mFail to get packedBuffer\033[0m" << std::endl;
-    return -1;
-  }
-
   mark::HuffmanTrees huffmanTree =
       static_cast<mark::DHT *>(_dht)->getHuffmanTree();
 
@@ -200,9 +201,9 @@ int Encoder::encodeScanData(ofstream &outputFile) {
       for (int dy = 0; dy < 8; ++dy) {
         for (int dx = 0; dx < 8; ++dx) {
           int offset = ((y + dy) * _imgHeight + (x + dx)) * 3;
-          matrix[0][dy][dx] = packedBuffer[offset];
-          matrix[1][dy][dx] = packedBuffer[offset + 1];
-          matrix[2][dy][dx] = packedBuffer[offset + 2];
+          matrix[0][dy][dx] = _packedBuffer[offset];
+          matrix[1][dy][dx] = _packedBuffer[offset + 1];
+          matrix[2][dy][dx] = _packedBuffer[offset + 2];
         }
       }
       _MCU.push_back(MCU(matrix, quantizationTables));
@@ -212,7 +213,7 @@ int Encoder::encodeScanData(ofstream &outputFile) {
   //_encodeScanData(huffmanTree, outputFile);
   _encodeScanData2(huffmanTree, outputFile);
 
-  SAFE_DELETE_ARRAY(packedBuffer);
+  SAFE_DELETE_ARRAY(_packedBuffer);
   return 0;
 }
 

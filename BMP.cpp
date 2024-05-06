@@ -61,7 +61,8 @@ int File::BMP::BMPToRBG(string &bmpFilePath, string rgbFilePath) {
 
 int File::BMP::BMPToYUV(string &bmpFilePath, string yuvFilePath) {
   BMPToRBG(bmpFilePath);
-  RGBToYUV();
+  Image::RGBToYUV(_rgbBuffer, _width, _height, _YUVSize, _yuv444PlanarBuffer,
+                  _yuv444PackedBuffer);
   if (yuvFilePath.empty())
     return 0;
 
@@ -76,42 +77,6 @@ int File::BMP::BMPToYUV(string &bmpFilePath, string yuvFilePath) {
 
   /* 写文件则释放内存 */
   close();
-  return 0;
-}
-
-int File::BMP::RGBToYUV() {
-  _YUVSize = _height * _width * 3;
-  int size = _height * _width;
-  _Y = new uint8_t[size];
-  _U = new uint8_t[size];
-  _V = new uint8_t[size];
-  int offset = -1;
-  for (int i = 0; i < _height; i++) {
-    for (int j = 0; j < _width; j++) {
-      offset = i * _height + j;
-      uint8_t r = _rgbBuffer[offset * 3];
-      uint8_t g = _rgbBuffer[offset * 3 + 1];
-      uint8_t b = _rgbBuffer[offset * 3 + 2];
-
-      _Y[offset] = round(0.299f * r + 0.587f * g + 0.114f * b);
-      _U[offset] = round(-0.1687f * r - 0.3313f * g + 0.5f * b + 128);
-      _V[offset] = round(0.5f * r - 0.4187f * g - 0.0813f * b + 128);
-    }
-  }
-  _yuv444PlanarBuffer = new uint8_t[_YUVSize];
-  memcpy(_yuv444PlanarBuffer, _Y, size);
-  memcpy(_yuv444PlanarBuffer + size, _U, size);
-  memcpy(_yuv444PlanarBuffer + size * 2, _V, size);
-
-  _yuv444PackedBuffer = new uint8_t[_YUVSize];
-  Image::YUV444PlanarToPacked(_yuv444PlanarBuffer, _yuv444PackedBuffer, _width,
-                              _height);
-  delete[] _Y;
-  _Y = nullptr;
-  delete[] _U;
-  _U = nullptr;
-  delete[] _V;
-  _V = nullptr;
   return 0;
 }
 
@@ -172,18 +137,6 @@ int File::BMP::close() {
     _rgbBuffer = nullptr;
   }
   _rgbBufferSize = 0;
-  if (_Y) {
-    delete[] _Y;
-    _Y = nullptr;
-  }
-  if (_U) {
-    delete[] _U;
-    _U = nullptr;
-  }
-  if (_V) {
-    delete[] _V;
-    _V = nullptr;
-  }
   if (_yuv444PlanarBuffer) {
     delete[] _yuv444PlanarBuffer;
     _yuv444PlanarBuffer = nullptr;
