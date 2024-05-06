@@ -14,7 +14,6 @@ typedef struct __attribute__((packed)) _SOS {
   uint8_t SOS[2] = {0xff, JFIF::SOS};
   uint16_t len = 0;
   uint8_t imageComponentCount = 0;
-  /* TODO YangJing 这里写死为固定3个分量，问题也不大 <24-04-28 19:34:22> */
   ScanComponent scanComponent[SCAN_COMPONENT];
   uint8_t startOfSpectral = 0;
   uint8_t endOfSpectral = 0;

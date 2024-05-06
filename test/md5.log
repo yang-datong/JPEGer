@@ -1,0 +1,40 @@
+./a.out -i lenna.jpg -o lenna_1.yuv 
+746c7120d479d06a90fee99c275372d1  lenna_1.yuv
+./a.out -i lenna.jpg -o lenna_2.yuv 
+746c7120d479d06a90fee99c275372d1  lenna_2.yuv
+./a.out -i lenna.jpg -o lenna_3.yuv 
+746c7120d479d06a90fee99c275372d1  lenna_3.yuv
+./a.out -i lenna.jpg -o lenna_4.yuv 
+746c7120d479d06a90fee99c275372d1  lenna_4.yuv
+./a.out -i lenna.jpg -o lenna_5.yuv 
+746c7120d479d06a90fee99c275372d1  lenna_5.yuv
+./a.out -i lenna.jpg -o lenna_1.ppm 
+1ca0ad19019c8e06584e1762051f02c7  lenna_1.ppm
+./a.out -i lenna.jpg -o lenna_2.ppm 
+1ca0ad19019c8e06584e1762051f02c7  lenna_2.ppm
+./a.out -i lenna.jpg -o lenna_3.ppm 
+1ca0ad19019c8e06584e1762051f02c7  lenna_3.ppm
+./a.out -i lenna.jpg -o lenna_4.ppm 
+1ca0ad19019c8e06584e1762051f02c7  lenna_4.ppm
+./a.out -i lenna.jpg -o lenna_5.ppm 
+1ca0ad19019c8e06584e1762051f02c7  lenna_5.ppm
+./a.out -i lenna.yuv -o demo_1.jpg 
+e245e86fa827f3b3c9a3a1f90d73bf76  demo_1.jpg
+./a.out -i lenna.yuv -o demo_2.jpg 
+e245e86fa827f3b3c9a3a1f90d73bf76  demo_2.jpg
+./a.out -i lenna.yuv -o demo_3.jpg 
+e245e86fa827f3b3c9a3a1f90d73bf76  demo_3.jpg
+./a.out -i lenna.yuv -o demo_4.jpg 
+e245e86fa827f3b3c9a3a1f90d73bf76  demo_4.jpg
+./a.out -i lenna.yuv -o demo_5.jpg 
+e245e86fa827f3b3c9a3a1f90d73bf76  demo_5.jpg
+./a.out -i lenna.bmp -o demo_1.jpg 
+353acbbb873ba2d67e71996e3e854430  demo_1.jpg
+./a.out -i lenna.bmp -o demo_2.jpg 
+353acbbb873ba2d67e71996e3e854430  demo_2.jpg
+./a.out -i lenna.bmp -o demo_3.jpg 
+353acbbb873ba2d67e71996e3e854430  demo_3.jpg
+./a.out -i lenna.bmp -o demo_4.jpg 
+353acbbb873ba2d67e71996e3e854430  demo_4.jpg
+./a.out -i lenna.bmp -o demo_5.jpg 
+353acbbb873ba2d67e71996e3e854430  demo_5.jpg

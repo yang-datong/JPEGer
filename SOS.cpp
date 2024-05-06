@@ -11,10 +11,12 @@ int mark::SOS::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "\timageComponentCount:" << (int)header.imageComponentCount
             << std::endl;
   std::cout << "\timageComponent{" << std::endl;
+  if (header.imageComponentCount != 3) {
+    std::cerr << "\033[31mWrong imageComponentCount:\033[0m" << std::endl;
+    return -1;
+  }
   for (int i = 0; i < header.imageComponentCount; i++) {
     /* 扫描分量选择器 */
-    /* TODO-YangJing-这里严重有问题：如果header.imageComponentCount不为3则很危险，不过正常情况下都是3，先这样吧
-     * <24-04-28 19:41:07> */
     header.scanComponent[i].scanComponentSelector = bs.readByte();
     std::cout << "\t\tscanComponentSelector:"
               << (int)header.scanComponent[i].scanComponentSelector;

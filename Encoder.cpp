@@ -88,7 +88,6 @@ int Encoder::readFileBuferToYUV444Packed() {
 int Encoder::startMakeMarker() {
   ofstream outputFile(_outputFilePath, ios_base::binary);
 
-  /* TODO YangJing 感觉这样写不太好 <24-05-06 15:01:01> */
   mark::SOF0 *sof0 = static_cast<mark::SOF0 *>(_sof0);
   sof0->setImageWidth(_imgWidth);
   sof0->setImageHeight(_imgHeight);

@@ -8,6 +8,7 @@
 File::BMP::BMP() {}
 File::BMP::~BMP() { close(); }
 
+/* TODO YangJing 有个问题，就是转成YUV后图片左右翻转了 <24-05-06 21:17:24> */
 int File::BMP::BMPToRBG(string &bmpFilePath, string rgbFilePath) {
   ifstream bmp_file(bmpFilePath, ios::binary);
   if (!bmp_file.is_open()) {

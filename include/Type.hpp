@@ -57,7 +57,7 @@ struct Pixel {
 };
 
 /* Huffman表 */
-typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
+typedef array<pair<uint8_t, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
     HuffmanTable;
 
 /* 量化表 */
@@ -65,9 +65,8 @@ typedef array<pair<int, vector<uint8_t>>, HUFFMAN_CODE_LENGTH_POSSIBLE>
 typedef vector<uint16_t> QuantizationTable;
 
 /* 3个二维矩阵(Y,U,V)，分量均为正数0-255
- * （不要用int存，那样的话空间复杂度是指数级别增长的） */
-/* TODO YangJing 不知道为什么用uint8_t与int8_t出来的图像有问题，先用16吧
- * <24-04-30 18:38:34> */
+ *（不要用int存，那样的话空间复杂度是指数级别增长的，16已经是最小的容器的，实测的过程中有写DC系数会达到-561这种大值）
+ */
 typedef array<array<array<uint16_t, 8>, 8>, 3> UCompMatrices;
 
 /* 3个二维矩阵(Y,U,V)，分量可为负数-125-124 */

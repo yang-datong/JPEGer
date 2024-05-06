@@ -165,7 +165,7 @@ void MCU::decodeACandDC() {
 
     /* 按Zig-Zag顺序转换回8x8的矩阵 */
     arrayToMatrixUseZigZag(_zzOrder, _matrix[imageComponent]);
-    // printMatrix(_matrix[imageComponent]);
+    // printMatrix();
   }
 }
 
@@ -217,8 +217,7 @@ void MCU::startIDCT() {
             // 从_matrix加载数据
             __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(
                 &_matrix[imageComponent][u][v]));
-            data = _mm_unpacklo_epi8(data, _mm_setzero_si128()); //
-            转换成16位
+            data = _mm_unpacklo_epi8(data, _mm_setzero_si128()); //转换成16位
 
             // 计算Cu, Cv和余弦值，需要将这些值转换为__m128类型以便使用
             __m128 Cu_sse = _mm_set_ps1(u == 0 ? 1.0 / std::sqrt(2.0) : 1.0);

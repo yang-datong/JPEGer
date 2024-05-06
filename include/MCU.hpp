@@ -16,9 +16,9 @@ class MCU {
   RLE _rle;
 
   vector<QuantizationTable> _qtTables;
-  /* 编码时：经过了中心化操作后的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
+  /* 编码时：经过了中心化操作后的宏块应该是包含负数的，所以应该使用int16_t，而不是uint16_t*/
   array<int16_t, MCU_UNIT_SIZE> _zzOrder = {0};
-  /* 解码时：经过了还未解码的宏块应该是包含负数的，所以应该使用int8_t，而不是uint8_t*/
+  /* 解码时：经过了还未解码的宏块应该是包含负数的，所以应该使用int16_t，而不是uint16_t*/
 
  public:
   MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables);
