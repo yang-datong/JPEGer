@@ -5,19 +5,24 @@
 #include <cstdint>
 
 namespace mark {
+/* 保证结构体是POD类型，确保在使用时明确初始化所有成员*/
 typedef struct _ScanComponent {
-  uint8_t scanComponentSelector = 0;
-  uint8_t TdTa = 0;
+  uint8_t scanComponentSelector;
+  uint8_t TdTa;
 } ScanComponent;
 
 typedef struct __attribute__((packed)) _SOS {
-  uint8_t SOS[2] = {0xff, JFIF::SOS};
-  uint16_t len = 0;
-  uint8_t imageComponentCount = 0;
+  uint8_t SOS[2];
+  uint16_t len;
+  uint8_t imageComponentCount;
   ScanComponent scanComponent[SCAN_COMPONENT];
-  uint8_t startOfSpectral = 0;
-  uint8_t endOfSpectral = 0;
-  uint8_t AhAl = 0;
+  uint8_t startOfSpectral;
+  uint8_t endOfSpectral;
+  uint8_t AhAl;
+
+  _SOS()
+      : SOS{0xff, JFIF::SOS}, len(0), imageComponentCount(0),
+        startOfSpectral(0), endOfSpectral(0), AhAl(0) {}
 } SOSHeader;
 
 class SOS : public Marker {

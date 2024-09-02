@@ -3,6 +3,11 @@
 #include "Image.hpp"
 #include "Type.hpp"
 
+//#define SSE
+//#define AVX
+#define Threads
+//#define Threads_AVX
+
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
@@ -33,8 +38,7 @@ void MCU::startDecode() {
   // printIDCTCoeffs();
   performLevelShift();
   // printUmatrix();
-  if (Image::sOutputFileType != FileFormat::YUV)
-    Image::YUVToRGB(_Umatrix);
+  if (Image::sOutputFileType != FileFormat::YUV) Image::YUVToRGB(_Umatrix);
 }
 
 void MCU::fillACRLE(int imageComponent) {
@@ -169,6 +173,115 @@ void MCU::decodeACandDC() {
   }
 }
 
+//===================================== SIMD SSE =============================================
+#if defined(SSE)
+#include <xmmintrin.h>
+void MCU::startDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+    float cos_values_u[8][8], cos_values_v[8][8];
+
+    for (int u = 0; u < 8; ++u)
+      for (int i = 0; i < 8; ++i)
+        cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v)
+      for (int j = 0; j < 8; ++j)
+        cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v) {
+      for (int u = 0; u < 8; ++u) {
+        __m128 sum = _mm_setzero_ps();
+
+        for (int i = 0; i < 8; ++i) {
+          __m128 cos_u_vec = _mm_set1_ps(cos_values_u[u][i]);
+
+          for (int j = 0; j < 8; j += 4) {
+            __m128 cos_v_vec =
+                _mm_set_ps(cos_values_v[v][j + 3], cos_values_v[v][j + 2],
+                           cos_values_v[v][j + 1], cos_values_v[v][j]);
+
+            __m128 coeff = _mm_set_ps(_dctCoeffs[imageComponent][i][j + 3],
+                                      _dctCoeffs[imageComponent][i][j + 2],
+                                      _dctCoeffs[imageComponent][i][j + 1],
+                                      _dctCoeffs[imageComponent][i][j]);
+
+            __m128 temp = _mm_mul_ps(cos_u_vec, cos_v_vec);
+            temp = _mm_mul_ps(temp, coeff);
+
+            sum = _mm_add_ps(sum, temp);
+          }
+        }
+
+        float result[4];
+        _mm_storeu_ps(result, sum);
+        float final_sum = result[0] + result[1] + result[2] + result[3];
+
+        float Cu = (u == 0) ? sqrt2_inv : 1.0;
+        float Cv = (v == 0) ? sqrt2_inv : 1.0;
+        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * final_sum);
+      }
+    }
+  }
+}
+#elif defined(AVX)
+#include <immintrin.h>
+void MCU::startDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+    float cos_values_u[8][8], cos_values_v[8][8];
+
+    for (int u = 0; u < 8; ++u)
+      for (int i = 0; i < 8; ++i)
+        cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v)
+      for (int j = 0; j < 8; ++j)
+        cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v) {
+      for (int u = 0; u < 8; ++u) {
+        __m256 sum = _mm256_setzero_ps();
+
+        for (int i = 0; i < 8; ++i) {
+          __m256 cos_u_vec = _mm256_set1_ps(cos_values_u[u][i]);
+
+          for (int j = 0; j < 8; j += 8) {
+            __m256 cos_v_vec =
+                _mm256_set_ps(cos_values_v[v][j + 7], cos_values_v[v][j + 6],
+                              cos_values_v[v][j + 5], cos_values_v[v][j + 4],
+                              cos_values_v[v][j + 3], cos_values_v[v][j + 2],
+                              cos_values_v[v][j + 1], cos_values_v[v][j]);
+
+            __m256 coeff = _mm256_set_ps(_dctCoeffs[imageComponent][i][j + 7],
+                                         _dctCoeffs[imageComponent][i][j + 6],
+                                         _dctCoeffs[imageComponent][i][j + 5],
+                                         _dctCoeffs[imageComponent][i][j + 4],
+                                         _dctCoeffs[imageComponent][i][j + 3],
+                                         _dctCoeffs[imageComponent][i][j + 2],
+                                         _dctCoeffs[imageComponent][i][j + 1],
+                                         _dctCoeffs[imageComponent][i][j]);
+
+            __m256 temp = _mm256_mul_ps(cos_u_vec, cos_v_vec);
+            temp = _mm256_mul_ps(temp, coeff);
+
+            sum = _mm256_add_ps(sum, temp);
+          }
+        }
+
+        float result[8];
+        _mm256_storeu_ps(result, sum);
+        float final_sum = result[0] + result[1] + result[2] + result[3] +
+                          result[4] + result[5] + result[6] + result[7];
+
+        float Cu = (u == 0) ? sqrt2_inv : 1.0;
+        float Cv = (v == 0) ? sqrt2_inv : 1.0;
+        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * final_sum);
+      }
+    }
+  }
+}
+#elif defined(Threads)
 void MCU::dctComponent(int imageComponent) {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
 
@@ -197,72 +310,238 @@ void MCU::startDCT() {
 
   // 等待所有线程完成
   for (thread &t : threads)
-    if (t.joinable())
-      t.join();
+    if (t.joinable()) t.join();
+}
+#elif defined(Threads_AVX)
+#include <immintrin.h>
+void MCU::dctComponent(int imageComponent) {
+  const float sqrt2_inv = 1.0 / sqrt(2.0);
+  float cos_values_u[8][8], cos_values_v[8][8];
+
+  for (int u = 0; u < 8; ++u)
+    for (int i = 0; i < 8; ++i)
+      cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+  for (int v = 0; v < 8; ++v)
+    for (int j = 0; j < 8; ++j)
+      cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+  for (int v = 0; v < 8; ++v) {
+    for (int u = 0; u < 8; ++u) {
+      __m256 sum = _mm256_setzero_ps();
+
+      for (int i = 0; i < 8; ++i) {
+        __m256 cos_u_vec = _mm256_set1_ps(cos_values_u[u][i]);
+
+        for (int j = 0; j < 8; j += 8) {
+          __m256 cos_v_vec =
+              _mm256_set_ps(cos_values_v[v][j + 7], cos_values_v[v][j + 6],
+                            cos_values_v[v][j + 5], cos_values_v[v][j + 4],
+                            cos_values_v[v][j + 3], cos_values_v[v][j + 2],
+                            cos_values_v[v][j + 1], cos_values_v[v][j]);
+
+          __m256 coeff = _mm256_set_ps(_dctCoeffs[imageComponent][i][j + 7],
+                                       _dctCoeffs[imageComponent][i][j + 6],
+                                       _dctCoeffs[imageComponent][i][j + 5],
+                                       _dctCoeffs[imageComponent][i][j + 4],
+                                       _dctCoeffs[imageComponent][i][j + 3],
+                                       _dctCoeffs[imageComponent][i][j + 2],
+                                       _dctCoeffs[imageComponent][i][j + 1],
+                                       _dctCoeffs[imageComponent][i][j]);
+
+          __m256 temp = _mm256_mul_ps(cos_u_vec, cos_v_vec);
+          temp = _mm256_mul_ps(temp, coeff);
+
+          sum = _mm256_add_ps(sum, temp);
+        }
+      }
+
+      float result[8];
+      _mm256_storeu_ps(result, sum);
+      float final_sum = result[0] + result[1] + result[2] + result[3] +
+                        result[4] + result[5] + result[6] + result[7];
+
+      float Cu = (u == 0) ? sqrt2_inv : 1.0;
+      float Cv = (v == 0) ? sqrt2_inv : 1.0;
+      _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * final_sum);
+    }
+  }
 }
 
-#if defined(SSE)
-void MCU::startIDCT() {
-  __m128 sum_sse = _mm_setzero_ps(); // 使用SSE指令集置零
-  float sum_array[4];
+void MCU::startDCT() {
+  vector<thread> threads;
+  // 先为每个图像分量创建线程
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    threads.push_back(thread(&MCU::dctComponent, this, imageComponent));
 
+  // 等待所有线程完成
+  for (thread &t : threads)
+    if (t.joinable()) t.join();
+}
+#else
+void MCU::startDCT() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    for (int j = 0; j < COMPONENT_SIZE; ++j) {
-      for (int i = 0; i < COMPONENT_SIZE; ++i) {
-        sum_sse = _mm_setzero_ps();
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+    float sum = 0.0, Cu = 0.0, Cv = 0.0;
 
-        for (int u = 0; u < COMPONENT_SIZE; u += 4) { //
-          以4个元素为一个处理单位
-          for (int v = 0; v < COMPONENT_SIZE; ++v) {
-            // 从_matrix加载数据
-            __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(
-                &_matrix[imageComponent][u][v]));
-            data = _mm_unpacklo_epi8(data, _mm_setzero_si128()); //转换成16位
-
-            // 计算Cu, Cv和余弦值，需要将这些值转换为__m128类型以便使用
-            __m128 Cu_sse = _mm_set_ps1(u == 0 ? 1.0 / std::sqrt(2.0) : 1.0);
-            __m128 Cv_sse = _mm_set_ps1(v == 0 ? 1.0 / std::sqrt(2.0) : 1.0);
-            __m128 cos1 = _mm_set_ps1(std::cos((2 * i + 1) * u * M_PI / 16.0));
-            __m128 cos2 = _mm_set_ps1(std::cos((2 * j + 1) * v * M_PI / 16.0));
-
-            // 转换data为float
-            __m128 data_ps =
-                _mm_cvtepi32_ps(_mm_unpacklo_epi16(data, _mm_setzero_si128()));
-
-            // 执行计算
-            __m128 partial_sum = _mm_mul_ps(data_ps, Cu_sse);
-            partial_sum = _mm_mul_ps(partial_sum, Cv_sse);
-            partial_sum = _mm_mul_ps(partial_sum, cos1);
-            partial_sum = _mm_mul_ps(partial_sum, cos2);
-            sum_sse = _mm_add_ps(sum_sse, partial_sum);
+    for (int v = 0; v < COMPONENT_SIZE; ++v) {
+      for (int u = 0; u < COMPONENT_SIZE; ++u) {
+        sum = 0;
+        for (int i = 0; i < COMPONENT_SIZE; ++i) {
+          for (int j = 0; j < COMPONENT_SIZE; ++j) {
+            sum += _dctCoeffs[imageComponent][i][j] *
+                   cos((2 * i + 1) * u * M_PI / 16) *
+                   cos((2 * j + 1) * v * M_PI / 16);
           }
         }
-
-        // 将累加的结果从SSE寄存器sum_sse转移到常规浮点数组sum_array中
-        _mm_storeu_ps(sum_array, sum_sse);
-
-        // 对sum_array中的结果进行后处理
-        float sum = 0.0;
-        for (int k = 0; k < 4; ++k) {
-          sum += sum_array[k];
-        }
-
-        _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+        Cu = u == 0 ? sqrt2_inv : 1.0;
+        Cv = v == 0 ? sqrt2_inv : 1.0;
+        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * sum);
       }
     }
   }
 }
-#else
+#endif
+
+//===================================== SIMD SSE =============================================
+#if defined(SSE)
+#include <xmmintrin.h>
+void MCU::startIDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+    float cos_values_u[8][8], cos_values_v[8][8];
+
+    /* 为了减少重复计算，预先计算cos值并存储在cos_values数组中 */
+    for (int u = 0; u < 8; ++u)
+      for (int i = 0; i < 8; ++i)
+        cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v)
+      for (int j = 0; j < 8; ++j)
+        cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+    /* 由于累加性质，所以这里只对内层循环实现SIMD重写，对于外层不改动，才可以确保累加操作的正确性  */
+    for (int j = 0; j < 8; ++j) {
+      for (int i = 0; i < 8; ++i) {
+        /* 初始化为0 */
+        __m128 sum = _mm_setzero_ps();
+
+        /* 内层循环SIMD化：在u和v的内层循环中使用SIMD指令来并行处理4个v值的计算。*/
+        for (int u = 0; u < 8; ++u) {
+          float Cu = (u == 0) ? sqrt2_inv : 1.0;
+          __m128 Cu_vec = _mm_set1_ps(Cu * cos_values_u[u][i]);
+
+          for (int v = 0; v < 8; v += 4) {
+            __m128 Cv_vec = _mm_set_ps(
+                (v + 3 == 0) ? sqrt2_inv : 1.0, (v + 2 == 0) ? sqrt2_inv : 1.0,
+                (v + 1 == 0) ? sqrt2_inv : 1.0, (v == 0) ? sqrt2_inv : 1.0);
+
+            __m128 cos_v_vec =
+                _mm_set_ps(cos_values_v[v + 3][j], cos_values_v[v + 2][j],
+                           cos_values_v[v + 1][j], cos_values_v[v][j]);
+
+            __m128 coeff = _mm_set_ps(_matrix[imageComponent][u][v + 3],
+                                      _matrix[imageComponent][u][v + 2],
+                                      _matrix[imageComponent][u][v + 1],
+                                      _matrix[imageComponent][u][v]);
+
+            __m128 temp = _mm_mul_ps(Cu_vec, Cv_vec);
+            temp = _mm_mul_ps(temp, cos_v_vec);
+            temp = _mm_mul_ps(temp, coeff);
+
+            sum = _mm_add_ps(sum, temp);
+          }
+        }
+
+        //对__m128进行横向和，得到最终和
+        float result[4];
+        _mm_storeu_ps(result, sum);
+        _idctCoeffs[imageComponent][i][j] =
+            round(1.0 / 4.0 * (result[0] + result[1] + result[2] + result[3]));
+      }
+    }
+  }
+}
+
+//===================================== SIMD AVX =============================================
+#elif defined(AVX)
+#include <immintrin.h> // AVX
+void MCU::startIDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+    float cos_values_u[8][8], cos_values_v[8][8];
+
+    for (int u = 0; u < 8; ++u)
+      for (int i = 0; i < 8; ++i)
+        cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+    for (int v = 0; v < 8; ++v)
+      for (int j = 0; j < 8; ++j)
+        cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+    for (int j = 0; j < 8; ++j) {
+      for (int i = 0; i < 8; ++i) {
+        __m256 sum = _mm256_setzero_ps(); // Initialize sum to 0
+
+        for (int u = 0; u < 8; ++u) {
+          float Cu = (u == 0) ? sqrt2_inv : 1.0;
+          __m256 Cu_vec = _mm256_set1_ps(Cu * cos_values_u[u][i]);
+
+          for (int v = 0; v < 8; v += 8) {
+            __m256 Cv_vec = _mm256_set_ps(
+                (v + 7 == 0) ? sqrt2_inv : 1.0, (v + 6 == 0) ? sqrt2_inv : 1.0,
+                (v + 5 == 0) ? sqrt2_inv : 1.0, (v + 4 == 0) ? sqrt2_inv : 1.0,
+                (v + 3 == 0) ? sqrt2_inv : 1.0, (v + 2 == 0) ? sqrt2_inv : 1.0,
+                (v + 1 == 0) ? sqrt2_inv : 1.0, (v == 0) ? sqrt2_inv : 1.0);
+
+            __m256 cos_v_vec =
+                _mm256_set_ps(cos_values_v[v + 7][j], cos_values_v[v + 6][j],
+                              cos_values_v[v + 5][j], cos_values_v[v + 4][j],
+                              cos_values_v[v + 3][j], cos_values_v[v + 2][j],
+                              cos_values_v[v + 1][j], cos_values_v[v][j]);
+
+            __m256 coeff = _mm256_set_ps(_matrix[imageComponent][u][v + 7],
+                                         _matrix[imageComponent][u][v + 6],
+                                         _matrix[imageComponent][u][v + 5],
+                                         _matrix[imageComponent][u][v + 4],
+                                         _matrix[imageComponent][u][v + 3],
+                                         _matrix[imageComponent][u][v + 2],
+                                         _matrix[imageComponent][u][v + 1],
+                                         _matrix[imageComponent][u][v]);
+
+            __m256 temp = _mm256_mul_ps(Cu_vec, Cv_vec);
+            temp = _mm256_mul_ps(temp, cos_v_vec);
+            temp = _mm256_mul_ps(temp, coeff);
+
+            sum = _mm256_add_ps(sum, temp);
+          }
+        }
+
+        // Horizontal sum of the __m256 vector to get the final sum
+        float result[8];
+        _mm256_storeu_ps(result, sum);
+        _idctCoeffs[imageComponent][i][j] =
+            round(1.0 / 4.0 *
+                  (result[0] + result[1] + result[2] + result[3] + result[4] +
+                   result[5] + result[6] + result[7]));
+      }
+    }
+  }
+}
+
+//===================================== Threads(3) =============================================
+#elif defined(Threads)
 void MCU::idctComponent(int imageComponent) {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
+  const float sqrt2_inv = 1.0 / sqrt(2.0);
 
   for (int j = 0; j < COMPONENT_SIZE; ++j) {
     for (int i = 0; i < COMPONENT_SIZE; ++i) {
       sum = 0.0;
       for (int u = 0; u < COMPONENT_SIZE; ++u) {
         for (int v = 0; v < COMPONENT_SIZE; ++v) {
-          Cu = u == 0 ? 1.0 / sqrt(2.0) : 1.0;
-          Cv = v == 0 ? 1.0 / sqrt(2.0) : 1.0;
+          Cu = u == 0 ? sqrt2_inv : 1.0;
+          Cv = v == 0 ? sqrt2_inv : 1.0;
 
           sum += Cu * Cv * _matrix[imageComponent][u][v] *
                  cos((2 * i + 1) * u * M_PI / 16.0) *
@@ -283,8 +562,108 @@ void MCU::startIDCT() {
 
   // 等待所有线程完成
   for (thread &t : threads)
-    if (t.joinable())
-      t.join();
+    if (t.joinable()) t.join();
+}
+
+//================================== Threads(3) And AVX =============================================
+#elif defined(Threads_AVX)
+#include <immintrin.h> // AVX
+void MCU::idctComponent(int imageComponent) {
+  const float sqrt2_inv = 1.0 / sqrt(2.0);
+  float cos_values_u[8][8], cos_values_v[8][8];
+
+  for (int u = 0; u < 8; ++u)
+    for (int i = 0; i < 8; ++i)
+      cos_values_u[u][i] = cos((2 * i + 1) * u * M_PI / 16.0);
+
+  for (int v = 0; v < 8; ++v)
+    for (int j = 0; j < 8; ++j)
+      cos_values_v[v][j] = cos((2 * j + 1) * v * M_PI / 16.0);
+
+  for (int j = 0; j < 8; ++j) {
+    for (int i = 0; i < 8; ++i) {
+      __m256 sum = _mm256_setzero_ps();
+
+      for (int u = 0; u < 8; ++u) {
+        float Cu = (u == 0) ? sqrt2_inv : 1.0;
+        __m256 Cu_vec = _mm256_set1_ps(Cu * cos_values_u[u][i]);
+
+        for (int v = 0; v < 8; v += 8) {
+          __m256 Cv_vec = _mm256_set_ps(
+              (v + 7 == 0) ? sqrt2_inv : 1.0, (v + 6 == 0) ? sqrt2_inv : 1.0,
+              (v + 5 == 0) ? sqrt2_inv : 1.0, (v + 4 == 0) ? sqrt2_inv : 1.0,
+              (v + 3 == 0) ? sqrt2_inv : 1.0, (v + 2 == 0) ? sqrt2_inv : 1.0,
+              (v + 1 == 0) ? sqrt2_inv : 1.0, (v == 0) ? sqrt2_inv : 1.0);
+
+          __m256 cos_v_vec =
+              _mm256_set_ps(cos_values_v[v + 7][j], cos_values_v[v + 6][j],
+                            cos_values_v[v + 5][j], cos_values_v[v + 4][j],
+                            cos_values_v[v + 3][j], cos_values_v[v + 2][j],
+                            cos_values_v[v + 1][j], cos_values_v[v][j]);
+
+          __m256 coeff = _mm256_set_ps(_matrix[imageComponent][u][v + 7],
+                                       _matrix[imageComponent][u][v + 6],
+                                       _matrix[imageComponent][u][v + 5],
+                                       _matrix[imageComponent][u][v + 4],
+                                       _matrix[imageComponent][u][v + 3],
+                                       _matrix[imageComponent][u][v + 2],
+                                       _matrix[imageComponent][u][v + 1],
+                                       _matrix[imageComponent][u][v]);
+
+          __m256 temp = _mm256_mul_ps(Cu_vec, Cv_vec);
+          temp = _mm256_mul_ps(temp, cos_v_vec);
+          temp = _mm256_mul_ps(temp, coeff);
+
+          sum = _mm256_add_ps(sum, temp);
+        }
+      }
+
+      float result[8];
+      _mm256_storeu_ps(result, sum);
+      _idctCoeffs[imageComponent][i][j] =
+          round(1.0 / 4.0 *
+                (result[0] + result[1] + result[2] + result[3] + result[4] +
+                 result[5] + result[6] + result[7]));
+    }
+  }
+}
+
+void MCU::startIDCT() {
+  vector<thread> threads;
+  // 先为每个图像分量创建线程
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
+    threads.push_back(thread(&MCU::idctComponent, this, imageComponent));
+
+  // 等待所有线程完成
+  for (thread &t : threads)
+    if (t.joinable()) t.join();
+}
+
+//================================== Single Threads =============================================
+#else
+void MCU::startIDCT() {
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    float sum = 0.0, Cu = 0.0, Cv = 0.0;
+    const float sqrt2_inv = 1.0 / sqrt(2.0);
+
+    for (int j = 0; j < COMPONENT_SIZE; ++j) {
+      for (int i = 0; i < COMPONENT_SIZE; ++i) {
+        sum = 0.0;
+        for (int u = 0; u < COMPONENT_SIZE; ++u) {
+          for (int v = 0; v < COMPONENT_SIZE; ++v) {
+            Cu = u == 0 ? sqrt2_inv : 1.0;
+            Cv = v == 0 ? sqrt2_inv : 1.0;
+
+            sum += Cu * Cv * _matrix[imageComponent][u][v] *
+                   cos((2 * i + 1) * u * M_PI / 16.0) *
+                   cos((2 * j + 1) * v * M_PI / 16.0);
+          }
+        }
+
+        _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+      }
+    }
+  }
 }
 #endif
 

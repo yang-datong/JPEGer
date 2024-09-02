@@ -1,16 +1,17 @@
 # Minimum version used by CMake
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
+# Generate compile_commands.json file
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project name
 project(project_name)
 
 # C++ version used, added compilation parameters
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -O0 -ggdb")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -O0 -ggdb -mavx")
 
- 
 # Specify header file directory
-include_directories(include/)
+include_directories(include)
  
 # Find all source files in the current directory
 aux_source_directory(. SOURCES)
