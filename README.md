@@ -1,7 +1,7 @@
 # Version 3
 JPEG-JFIF解码器，具有编、解码功能，按照JPEG-JFIF标准编写且符合JFIF协议，很多数值都是写死的（不具有动态修改）。
 
-**已有功能**：能编、解码标准的JPEG-JFIF文件，具体有DCT/IDCT多线程，IDCT SIMD加速功能。
+**已有功能**：能编、解码标准的JPEG-JFIF文件，具体有DCT/IDCT多线程、SIMD(SSE,AVX)加速功能。
 
 ## 问题
 
