@@ -150,6 +150,33 @@ $ md5sum demo.jpg
 
 
 
+## 编译器优化加速
+
+添加`-O3 -ftree-vectorize `参数，解码：
+
+```bash
+$ time ./a.out -i DeskImage.jpg -o demo.yuv
+________________________________________________________
+Executed in    6.84 secs    fish           external
+   usr time    2.78 secs    0.10 millis    2.78 secs
+   sys time    2.73 secs    1.02 millis    2.73 secs
+```
+
+编码：
+
+```bash
+$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
+________________________________________________________
+Executed in    6.78 secs    fish           external
+   usr time    2.70 secs  669.00 micros    2.70 secs
+   sys time    2.79 secs  203.00 micros    2.79 secs
+
+```
+
+
+
+
+
 ## 后续
 
 - [x] 模块化项目
