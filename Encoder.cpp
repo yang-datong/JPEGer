@@ -1,15 +1,4 @@
 #include "Encoder.hpp"
-#include "BMP.hpp"
-#include "Common.hpp"
-#include "Image.hpp"
-#include "Type.hpp"
-#include <array>
-#include <bitset>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <fstream>
-#include <ios>
 
 Encoder::Encoder(const string &inputFilePath, const string &outputFilePath)
     : _inputFilePath(inputFilePath), _outputFilePath(outputFilePath) {
@@ -126,29 +115,29 @@ int Encoder::startMakeMarker() {
   return 0;
 }
 
-void Encoder::writeBitStream(const string &scanData, ofstream &outputFile) {
-  uint8_t byteBuffer = 0; // 用于暂存构建中的字节
-  int bitCount = 0;       // 累计构建字节中的位数
+void Encoder::writeBitStream(const uint32_t data, uint32_t len,
+                             ofstream &outputFile, bool is_flush = false) {
+  static uint32_t bit_ptr = 0;
+  static uint32_t bitbuf = 0x00000000;
+  uint8_t w = 0x00;
 
-  for (char bit : scanData) {
-    byteBuffer = (byteBuffer << 1) | (bit - '0'); // 将下一个位加入到字节缓冲区
-    bitCount++;                                   // 增加位的计数
+  bitbuf |= data << (32 - bit_ptr - len);
+  bit_ptr += len;
 
-    if (bitCount == 8) {                             // 如果字节已经填满
-      outputFile.put(static_cast<char>(byteBuffer)); // 将字节写入文件
-      if ((uint8_t)byteBuffer == 0xff) {
-        char zero = 0x00;
-        outputFile.write(&zero, 1);
-      }
-      bitCount = 0;   // 重置计数器
-      byteBuffer = 0; // 重置字节缓冲区
+  while (bit_ptr >= 8) {
+    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
+    outputFile.write((char *)&w, 1);
+    if (w == 0xFF) {
+      char zero = 0x00;
+      outputFile.write((char *)&zero, 1);
     }
+    bitbuf <<= 8;
+    bit_ptr -= 8;
   }
 
-  // 处理最后一个不完整的字节（如果有）
-  if (bitCount > 0) {
-    byteBuffer <<= (8 - bitCount); // 左移剩余的位，确保它们在字节的高位
-    outputFile.put(static_cast<char>(byteBuffer)); // 将最后的字节写入文件
+  if (is_flush) {
+    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
+    outputFile.write((char *)&w, 1);
   }
 }
 
@@ -159,8 +148,7 @@ void Encoder::writeBitStream(const string &scanData, ofstream &outputFile) {
  * 4. 对于负数，采用其绝对值二进制表示的反码（所有1变为0，所有0变为1）。
  * */
 string Encoder::VLIEncode(int value) {
-  if (value == 0)
-    return "-1";
+  if (value == 0) return "-1";
   /* 这里有种特殊情况，如果数值为0则直接返回-1,因为-1解码会得到0（如果按照正常编码0编码后还是0）*/
 
   /* 确定这个二进制表示占用的位数,即编码后的总长度（使用绝对值） */
@@ -209,8 +197,7 @@ int Encoder::encodeScanData(ofstream &outputFile) {
     }
   }
 
-  //_encodeScanData(huffmanTree, outputFile);
-  _encodeScanData2(huffmanTree, outputFile);
+  _encodeScanData(huffmanTree, outputFile);
 
   SAFE_DELETE_ARRAY(_packedBuffer);
   return 0;
@@ -218,11 +205,11 @@ int Encoder::encodeScanData(ofstream &outputFile) {
 
 int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
                              ofstream &outputFile) {
-  string scanData;
   for (int i = 0; i < (int)_MCU.size(); i++) {
     auto mcu = _MCU[i];
     mcu.startEncode();
     RLE rle = mcu.getRLE();
+    /*NOTE: 每个分量编码并写入文件的操作是分开进行的，而不是等到所有分量都编码完成后再合并写入。因为JPEG文件是按照一定的结构组织的，其中每个分量的数据在文件中通常有明确的开始和结束标示，所以它们是分别处理的*/
     for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
       string coeffDC = VLIEncode(rle[imageComponent][1]);
@@ -231,9 +218,10 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
       string value = huffmanTree[HT_DC][HuffTableID].encode(category);
       // printDCInfo(HuffTableID, category, value.length(), value);
 
-      value += coeffDC == "-1" ? "0" : coeffDC;
-      rle[imageComponent][1] == 0 ? "00" : value;
-      scanData.append(value);
+      writeBitStream(bitset<16>(value).to_ulong(), value.length(), outputFile);
+      if (rle[imageComponent][1] != 0)
+        writeBitStream(bitset<16>(coeffDC).to_ulong(), coeffDC.length(),
+                       outputFile);
 
       if (category > 11)
         std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
@@ -243,7 +231,7 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
         uint8_t zeroCount = rle[imageComponent][i];
 
         uint8_t symbol;
-        string coeffAC;
+        string coeffAC = "";
         uint8_t coeffACLen;
 
         if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
@@ -256,6 +244,10 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
           symbol = combineOneByte(zeroCount, coeffACLen);
         }
         string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
+        writeBitStream(bitset<16>(value).to_ulong(), value.length(),
+                       outputFile);
+        writeBitStream(bitset<16>(coeffAC).to_ulong(), coeffAC.length(),
+                       outputFile);
 
         // if (symbol == 0xf0)
         //   printZRLInfo(HuffTableID, value, symbol);
@@ -264,113 +256,11 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
         // else
         //   printCommonInfo(HuffTableID, value, symbol, zeroCount, coeffDCLen);
 
-        //在Huffman编码后的数据中，你不会预设一个编码是0xFF，因为Huffman编码是根据数据的频率动态生成的，它不会固定地将某个值编码为0xFF。出现0xFF字节的情况是在你将Huffman编码后的比特流合并并以每8位分割成字节后可能发生的。比如ZRL和EOI也是这样，每个huffman编码按顺序读取都是唯一的。
-        scanData.append(value);
-      }
-      /*每个分量编码并写入文件的操作是分开进行的，而不是等到所有分量都编码完成后再合并写入。因为JPEG文件是按照一定的结构组织的，其中每个分量的数据在文件中通常有明确的开始和结束标示，所以它们是分别处理的*/
-      writeBitStream(scanData, outputFile);
-      scanData.clear();
-    }
-  }
-  return 0;
-}
-
-int Encoder::_encodeScanData2(mark::HuffmanTrees huffmanTree,
-                              ofstream &outputFile) {
-  for (int i = 0; i < (int)_MCU.size(); i++) {
-    auto mcu = _MCU[i];
-    mcu.startEncode();
-    RLE rle = mcu.getRLE();
-    for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
-      bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
-      string coeffDC = VLIEncode(rle[imageComponent][1]);
-      uint8_t coeffDCLen = coeffDC == "-1" ? 0 : coeffDC.length();
-      uint8_t &category = coeffDCLen;
-      string value = huffmanTree[HT_DC][HuffTableID].encode(category);
-      // printDCInfo(HuffTableID, category, value.length(), value);
-
-      /* Huffman编码后最长长度为16 */
-      jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
-                      outputFile);
-      if (rle[imageComponent][1] != 0)
-        jpeg_write_bits(bitset<16>(coeffDC).to_ulong(), coeffDCLen, 0,
-                        outputFile);
-
-      if (category > 11) {
-        std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
-                  << std::endl;
-        return -1;
-      }
-      for (int i = 2; i <= (int)rle[imageComponent].size() - 2; i += 2) {
-        uint8_t zeroCount = rle[imageComponent][i];
-
-        uint8_t symbol;
-        string coeffAC;
-        uint8_t coeffACLen;
-        if (zeroCount == 0 && rle[imageComponent][i + 1] == 0) {
-          symbol = 0x00;
-        } else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
-          symbol = 0xf0;
-        else {
-          coeffAC = VLIEncode(rle[imageComponent][i + 1]);
-          coeffACLen = coeffAC.length();
-          symbol = combineOneByte(zeroCount, coeffACLen);
-        }
-        string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
-
-        if (symbol == 0xf0) {
-          // printZRLInfo(HuffTableID, value, symbol);
-          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
-                          outputFile);
-        } else if (symbol == 0x00) {
-          // printEOBInfo(HuffTableID, value, symbol);
-          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
-                          outputFile);
-        } else {
-          // printCommonInfo(HuffTableID, value, symbol, zeroCount,
-          // coeffDCLen);
-          jpeg_write_bits(bitset<16>(value).to_ulong(), value.length(), 0,
-                          outputFile);
-          jpeg_write_bits(bitset<16>(coeffAC).to_ulong(), coeffACLen, 0,
-                          outputFile);
-        }
+        //在Huffman编码后的数据中，不会预设一个编码是0xFF，因为Huffman编码是根据数据的频率动态生成的，它不会固定地将某个值编码为0xFF。出现0xFF字节的情况是在你将Huffman编码后的比特流合并并以每8位分割成字节后可能发生的。比如ZRL和EOI也是这样，每个huffman编码按顺序读取都是唯一的。
       }
     }
   }
-  // 清除缓存
-  jpeg_write_bits(0, 0, 1, outputFile);
-  return 0;
-}
-
-int32_t Encoder::jpeg_write_bits(uint32_t data, int32_t len, int32_t flush,
-                                 ofstream &outputFile) {
-  static uint32_t bit_ptr = 0; // 与平时阅读习惯相反，最高位计为0，最低位计为31
-  static uint32_t bitbuf = 0x00000000;
-  uint8_t w = 0x00;
-
-  bitbuf |= data << (32 - bit_ptr - len);
-  bit_ptr += len;
-
-  while (bit_ptr >= 8) {
-    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
-    jpeg_write_u8(w, outputFile);
-    if (w == 0xFF) {
-      jpeg_write_u8(0x00, outputFile);
-    }
-    bitbuf <<= 8;
-    bit_ptr -= 8;
-  }
-
-  if (flush) {
-    w = (uint8_t)((bitbuf & 0xFF000000) >> 24);
-    jpeg_write_u8(w, outputFile);
-  }
-  return 0;
-}
-
-int32_t Encoder::jpeg_write_u8(uint8_t data, ofstream &outputFile) {
-  uint8_t wd = data;
-  outputFile.write((char *)&wd, 1);
+  writeBitStream(0, 0, outputFile, true);
   return 0;
 }
 
@@ -387,18 +277,18 @@ void Encoder::printDCInfo(int HuffTableID, int category, int codeLen,
 void Encoder::printZRLInfo(int HuffTableID, string &value, int symbol) {
   std::cout << "AC -> {" << std::endl;
   std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" : "Chroma")
-            << ", Run/Size:F/0(ZRL)"
-            << ", Code Length:" << value.length() << ", Code word:" << value
-            << ", " << (int)symbol << " -encode-> " << value << std::endl;
+            << ", Run/Size:F/0(ZRL)" << ", Code Length:" << value.length()
+            << ", Code word:" << value << ", " << (int)symbol << " -encode-> "
+            << value << std::endl;
   std::cout << "}" << std::endl;
 }
 
 void Encoder::printEOBInfo(int HuffTableID, string &value, int symbol) {
   std::cout << "AC -> {" << std::endl;
   std::cout << "\tCommom:" << (HuffTableID == 0 ? "Luma" : "Chroma")
-            << ", Run/Size:0/0(EOB)"
-            << ", Code Length:" << value.length() << ", Code word:" << value
-            << ", " << (int)symbol << " -encode-> " << value << std::endl;
+            << ", Run/Size:0/0(EOB)" << ", Code Length:" << value.length()
+            << ", Code word:" << value << ", " << (int)symbol << " -encode-> "
+            << value << std::endl;
   std::cout << "}" << std::endl;
 }
 

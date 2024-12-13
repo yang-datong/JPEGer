@@ -1,16 +1,14 @@
 #ifndef DECODER_HPP_4KCLDUFQ
 #define DECODER_HPP_4KCLDUFQ
 
-#include "APP0.hpp"
-#include "COM.hpp"
-#include "DHT.hpp"
-#include "DQT.hpp"
-#include "Image.hpp"
-#include "SOF0.hpp"
-#include "SOS.hpp"
+#include "APP0.hpp" // IWYU pragma: export
+#include "COM.hpp"  // IWYU pragma: export
+#include "DHT.hpp"  // IWYU pragma: export
+#include "DQT.hpp"  // IWYU pragma: export
+#include "SOF0.hpp" // IWYU pragma: export
+#include "SOS.hpp"  // IWYU pragma: export
 
-#include "ByteStream.hpp"
-#include "HuffmanTree.hpp"
+#include "Image.hpp"
 #include "MCU.hpp"
 
 class Decoder {

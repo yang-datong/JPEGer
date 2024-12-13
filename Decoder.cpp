@@ -1,11 +1,4 @@
 #include "Decoder.hpp"
-#include "Common.hpp"
-#include "HuffmanTree.hpp"
-#include "Image.hpp"
-#include "Type.hpp"
-#include <bitset>
-#include <chrono>
-#include <cstdint>
 
 Decoder::Decoder(const string &filePath) : _filePath(filePath) {
   _app0 = new mark::APP0();
@@ -33,8 +26,7 @@ Decoder::~Decoder() {
 }
 
 int Decoder::startFindMarker() {
-  if (Image::readJPEGFile(_filePath, _buf, _bufSize))
-    return -1;
+  if (Image::readJPEGFile(_filePath, _buf, _bufSize)) return -1;
 
   /* 不读取最后一个字节 */
   for (int i = 0; i < _bufSize - 1; i++) {
@@ -69,8 +61,7 @@ int Decoder::startFindMarker() {
         break;
       case JFIF::EOI:
         std::cout << "End OF Image" << std::endl;
-        if (i + 2 != _bufSize)
-          return -1;
+        if (i + 2 != _bufSize) return -1;
         break;
       }
     }
@@ -93,8 +84,7 @@ int Decoder::decodeScanData() {
   erasePaddingBytes(scanData);
   /* 正式进入解码层 */
 
-  if (_MCU.size() != 0)
-    _MCU.clear();
+  if (_MCU.size() != 0) _MCU.clear();
 
   int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
 
@@ -177,8 +167,7 @@ int Decoder::decodeScanData() {
           /* DC系数 */
           rle[imageComponent].push_back(coeffAC);
 
-          if (value == "EOB")
-            break;
+          if (value == "EOB") break;
         }
       }
 
@@ -203,8 +192,7 @@ inline int Decoder::erasePaddingBytes(string &scanData) {
   for (int i = 0; i < (int)scanData.size() - 8; i += 8) {
     string str8Len = scanData.substr(i, 8);
     if (str8Len == "11111111" && (i + 8) < ((int)scanData.size() - 8))
-      if (scanData.substr(i + 8, 8) == "00000000")
-        scanData.erase(i + 8, 8);
+      if (scanData.substr(i + 8, 8) == "00000000") scanData.erase(i + 8, 8);
   }
   std::cout << "Encode data size(After erase):" << scanData.size() << std::endl;
   return 0;
@@ -228,8 +216,7 @@ int Decoder::createImage(const string ouputFileName) {
     break;
   }
 
-  if (ret < 0)
-    return -1;
+  if (ret < 0) return -1;
   return 0;
 }
 
@@ -239,8 +226,7 @@ int Decoder::createImage(const string ouputFileName) {
  * 3.如果是负数则去除前面的所有0字符，再按位取反，乘上-1得到原来的负数
  * */
 int16_t Decoder::decodeVLI(const string &value) {
-  if (value.empty())
-    return 0;
+  if (value.empty()) return 0;
   int sign = value[0] == '0' ? -1 : 1;
   int16_t result = 0;
   string tmp = value;
@@ -251,8 +237,7 @@ int16_t Decoder::decodeVLI(const string &value) {
   }
   /* 转为整型 */
   for (int i = 0; i < (int)tmp.size(); i++)
-    if (tmp[i] == '1')
-      result |= 1 << (tmp.size() - i - 1);
+    if (tmp[i] == '1') result |= 1 << (tmp.size() - i - 1);
 
   return result * sign;
 }

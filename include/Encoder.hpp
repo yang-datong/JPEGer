@@ -1,19 +1,16 @@
 #ifndef ENCODER_HPP_UW8N0IPM
 #define ENCODER_HPP_UW8N0IPM
 
-#include "APP0.hpp"
-#include "BMP.hpp"
-#include "ByteStream.hpp"
-#include "COM.hpp"
-#include "Common.hpp"
+#include "APP0.hpp" // IWYU pragma: export
+#include "BMP.hpp"  // IWYU pragma: export
+#include "COM.hpp"  // IWYU pragma: export
+#include "DQT.hpp"  // IWYU pragma: export
+#include "SOF0.hpp" // IWYU pragma: export
+#include "SOS.hpp"  // IWYU pragma: export
+
 #include "DHT.hpp"
-#include "DQT.hpp"
-#include "HuffmanTree.hpp"
 #include "Image.hpp"
 #include "MCU.hpp"
-#include "SOF0.hpp"
-#include "SOS.hpp"
-#include "Type.hpp"
 
 class Encoder {
  public:
@@ -50,21 +47,16 @@ class Encoder {
 
   int encodeScanData(ofstream &outputFile);
   string VLIEncode(int value);
-  void writeBitStream(const string &scanData, ofstream &outputFile);
+  void writeBitStream(const uint32_t data, uint32_t len, ofstream &outputFile,
+                      bool is_flush);
 
   int _encodeScanData(mark::HuffmanTrees huffmanTree, ofstream &outputFile);
-  int _encodeScanData2(mark::HuffmanTrees huffmanTree, ofstream &outputFile);
 
   void printDCInfo(int HuffTableID, int category, int codeLen, string &value);
   void printZRLInfo(int HuffTableID, string &value, int symbol);
   void printEOBInfo(int HuffTableID, string &value, int symbol);
   void printCommonInfo(int HuffTableID, string &value, int symbol,
                        int zeroCount, int coeffACLen);
-
-  int32_t jpeg_write_bits(uint32_t data, int32_t len, int32_t flush,
-                          ofstream &outputFile);
-
-  int32_t jpeg_write_u8(uint8_t data, ofstream &outputFile);
 };
 
 #endif /* end of include guard: ENCODER_HPP_UW8N0IPM */
