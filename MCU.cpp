@@ -5,8 +5,8 @@
 
 //#define SSE
 //#define AVX
-#define Threads
-//#define Threads_AVX
+//#define Threads
+#define Threads_AVX
 
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;

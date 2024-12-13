@@ -1,3 +1,4 @@
+// arg -i test/lenna.jpg -o output.yuv
 #include "Decoder.hpp"
 #include "Encoder.hpp"
 #include "Type.hpp"
