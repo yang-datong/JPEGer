@@ -70,7 +70,7 @@ int mark::DHT::parse(int index, uint8_t *buf, int bufSize) {
 void mark::DHT::printHuffmanTable(const HuffmanTable &hf) {
   for (int i = 0; i < HUFFMAN_CODE_LENGTH_POSSIBLE; i++) {
     std::cout << "\thuffmanCodeLen:[";
-    std::cout << hf[i].first;
+    std::cout << (int)hf[i].first;
     std::cout << "]";
     std::cout << ",huffmanCodes:{";
     for (const auto &it : hf[i].second) {
