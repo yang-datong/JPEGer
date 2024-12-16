@@ -212,40 +212,45 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
     /*NOTE: 每个分量编码并写入文件的操作是分开进行的，而不是等到所有分量都编码完成后再合并写入。因为JPEG文件是按照一定的结构组织的，其中每个分量的数据在文件中通常有明确的开始和结束标示，所以它们是分别处理的*/
     for (int imageComponent = 0; imageComponent < 3; imageComponent++) {
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
-      string coeffDC = VLIEncode(rle[imageComponent][1]);
-      uint8_t coeffDCLen = coeffDC == "-1" ? 0 : coeffDC.length();
-      uint8_t &category = coeffDCLen;
-      string value = huffmanTree[HT_DC][HuffTableID].encode(category);
-      // printDCInfo(HuffTableID, category, value.length(), value);
 
-      writeBitStream(bitset<16>(value).to_ulong(), value.length(), outputFile);
-      if (rle[imageComponent][1] != 0)
+      /* 比特流:  ........|coeffDCLen_encoded|coeffDC|zero_flag_encode|coeffAC|..... */
+
+      int DC = rle[imageComponent][1];
+      string coeffDC = VLIEncode(DC);
+      uint8_t coeffDCLen = coeffDC == "-1" ? 0 : coeffDC.length();
+      string coeffDCLen_encoded =
+          huffmanTree[HT_DC][HuffTableID].encode(coeffDCLen);
+      writeBitStream(bitset<16>(coeffDCLen_encoded).to_ulong(),
+                     coeffDCLen_encoded.length(), outputFile);
+      // printDCInfo(HuffTableID, coeffDCLen, coeffDCLen_encoded.length(), coeffDCLen_encoded);
+      if (DC != 0)
         writeBitStream(bitset<16>(coeffDC).to_ulong(), coeffDC.length(),
                        outputFile);
 
-      if (category > 11)
-        std::cerr << "\033[31mDC Category:" << (int)category << "\033[0m"
+      if (coeffDCLen > 11)
+        std::cerr << "\033[31mDC Category:" << (int)coeffDCLen << "\033[0m"
                   << std::endl;
 
       for (int i = 2; i <= (int)rle[imageComponent].size() - 2; i += 2) {
         uint8_t zeroCount = rle[imageComponent][i];
 
-        uint8_t symbol;
+        uint8_t zero_flag;
         string coeffAC = "";
         uint8_t coeffACLen;
 
         if (zeroCount == 0 && rle[imageComponent][i + 1] == 0)
-          symbol = 0x00;
+          zero_flag = 0x00;
         else if (zeroCount == 0xf && rle[imageComponent][i + 1] == 0)
-          symbol = 0xf0;
+          zero_flag = 0xf0;
         else {
           coeffAC = VLIEncode(rle[imageComponent][i + 1]);
           coeffACLen = coeffAC.length();
-          symbol = combineOneByte(zeroCount, coeffACLen);
+          zero_flag = combineOneByte(zeroCount, coeffACLen);
         }
-        string value = huffmanTree[HT_AC][HuffTableID].encode(symbol);
-        writeBitStream(bitset<16>(value).to_ulong(), value.length(),
-                       outputFile);
+        string zero_flag_encode =
+            huffmanTree[HT_AC][HuffTableID].encode(zero_flag);
+        writeBitStream(bitset<16>(zero_flag_encode).to_ulong(),
+                       zero_flag_encode.length(), outputFile);
         writeBitStream(bitset<16>(coeffAC).to_ulong(), coeffAC.length(),
                        outputFile);
 
