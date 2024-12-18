@@ -214,6 +214,14 @@ int Encoder::_encodeScanData(mark::HuffmanTrees huffmanTree,
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
 
       /* 比特流:  ........|coeffDCLen_encoded|coeffDC|zero_flag_encode|coeffAC|..... */
+      // NOTE: 这里是比特流,所以在解码端会先读取到(从低位->高位)coeffDCLen_encoded,然后:
+      // 对coeffDCLen_encoded -> 执行Huffman解码 -> 得到VLI编码后的DC长度 -> 从比特流读取DC长度 -> VLI解码得到DC -> 拿到DC
+
+      /* 在JPEG算法中,DC系数的编码规则是:
+  差分编码(DC值) -> VLI编码(DC值) -> Huffman编码(VLI编码长度) ->  霍夫曼编码(VLI(DC)) + VLI编码(Level)
+
+  AC系数的编码规则是:
+  Zig-Zag排序 -> 行程编码(RLE) (Run, Level) -> VLI编码(Level) -> 霍夫曼编码((Run, Size)) + VLI编码(Level) */
 
       int DC = rle[imageComponent][1];
       string coeffDC = VLIEncode(DC);

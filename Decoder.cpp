@@ -116,16 +116,20 @@ int Decoder::decodeScanData() {
           return -1;
         }
         /* 先解码最外层的Huffman编码（按照对应的Huffman类型解码） */
-        string value = huffmanTree[HT_DC][HuffTableID].decode(bitsScanned);
-        if (checkSpace(value)) {
+        string DC_len_VLICoded =
+            huffmanTree[HT_DC][HuffTableID].decode(bitsScanned);
+        if (checkSpace(DC_len_VLICoded)) {
           uint8_t zeroCount = 0;
           int16_t coeffDC = 0;
-          if (value != "EOB") {
+          /* TODO YangJing 这里判断EOB是不是有问题?这里会有EOB? <24-12-16 14:53:15> */
+
+          /* TODO YangJing 这里的算法写法感觉有问题,后面要全部改写,且string模式太慢了 <24-12-16 14:54:45> */
+          if (DC_len_VLICoded != "EOB") {
             // printDCCoefficient(HuffTableID, value, bitsScanned);
             /* 获取DC系数中 零的游程 */
-            zeroCount = uint8_t(stoi(value)) >> 4;
+            zeroCount = uint8_t(stoi(DC_len_VLICoded)) >> 4;
             /* 得到VLI的长度 */
-            uint8_t lengthVLI = stoi(value) & 0xf;
+            uint8_t lengthVLI = stoi(DC_len_VLICoded) & 0xf;
             /* 再解码VLI编码拿到DC系数 */
             coeffDC = decodeVLI(scanData.substr(index, lengthVLI));
             index += lengthVLI;
