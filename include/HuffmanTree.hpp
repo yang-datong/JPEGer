@@ -3,6 +3,7 @@
 
 #include "Common.hpp"
 #include "MCU.hpp"
+#include <cstdint>
 
 struct Node {
   bool root = false;
@@ -25,7 +26,7 @@ typedef std::shared_ptr<Node> NodePtr;
 class HuffmanTree {
  public:
   int buildHuffmanTree(HuffmanTable &htable);
-  const string decode(const string &huffCode);
+  const int decode(const string &huffCode);
   const string encode(const uint8_t value);
 
  private:

@@ -10,11 +10,9 @@ inline NodePtr HuffmanTree::createRootNode(const uint16_t value) {
 }
 
 void HuffmanTree::insertLeft(NodePtr node, const uint16_t value) {
-  if (node == nullptr)
-    return;
+  if (node == nullptr) return;
 
-  if (node->lChild != nullptr)
-    return;
+  if (node->lChild != nullptr) return;
 
   NodePtr lNode = createNode();
   lNode->parent = node;
@@ -25,11 +23,9 @@ void HuffmanTree::insertLeft(NodePtr node, const uint16_t value) {
 }
 
 void HuffmanTree::insertRight(NodePtr node, const uint16_t value) {
-  if (node == nullptr)
-    return;
+  if (node == nullptr) return;
 
-  if (node->rChild != nullptr)
-    return;
+  if (node->rChild != nullptr) return;
 
   NodePtr rNode = createNode();
   rNode->parent = node;
@@ -40,8 +36,7 @@ void HuffmanTree::insertRight(NodePtr node, const uint16_t value) {
 }
 
 NodePtr HuffmanTree::getRightLevelNode(NodePtr node) {
-  if (node == nullptr)
-    return nullptr;
+  if (node == nullptr) return nullptr;
 
   if (node->parent != nullptr && node->parent->lChild == node)
     return node->parent->rChild;
@@ -53,8 +48,7 @@ NodePtr HuffmanTree::getRightLevelNode(NodePtr node) {
     count++;
   }
 
-  if (nptr->parent == nullptr)
-    return nullptr;
+  if (nptr->parent == nullptr) return nullptr;
 
   nptr = nptr->parent->rChild;
 
@@ -67,16 +61,13 @@ NodePtr HuffmanTree::getRightLevelNode(NodePtr node) {
 }
 
 void HuffmanTree::printHuufmanTree(NodePtr node, string str) {
-  if (node == nullptr)
-    return;
+  if (node == nullptr) return;
 
-  if (node->value != 0)
-    std::cout << node->value << ":" << str;
+  if (node->value != 0) std::cout << node->value << ":" << str;
 
   printHuufmanTree(node->lChild, str + "0");
   printHuufmanTree(node->rChild, str + "1");
-  if (node->value != 0)
-    std::cout << ", ";
+  if (node->value != 0) std::cout << ", ";
 }
 
 int HuffmanTree::buildHuffmanTree(HuffmanTable &htable) {
@@ -123,8 +114,7 @@ const string HuffmanTree::encode(const uint8_t value) {
   // 使用一个lambda递归函数进行其本身的搜索
   std::function<void(NodePtr)> searchEncode = [&](NodePtr currentNode) {
     // 如果当前节点是空的停止搜索
-    if (!currentNode)
-      return;
+    if (!currentNode) return;
 
     // 如果是叶子节点并且值匹配，那么找到编码并返回
     if (currentNode->leaf && currentNode->value == value) {
@@ -135,8 +125,7 @@ const string HuffmanTree::encode(const uint8_t value) {
     if (currentNode->lChild != nullptr) {
       searchEncode(currentNode->lChild);
     }
-    if (!huffCode.empty())
-      return; // 如果找到值则终止搜索
+    if (!huffCode.empty()) return; // 如果找到值则终止搜索
 
     if (currentNode->rChild != nullptr) {
       searchEncode(currentNode->rChild);
@@ -148,9 +137,8 @@ const string HuffmanTree::encode(const uint8_t value) {
   return huffCode;
 }
 
-const string HuffmanTree::decode(const string &huffCode) {
-  if (!checkSpace(huffCode))
-    return "";
+const int HuffmanTree::decode(const string &huffCode) {
+  if (!checkSpace(huffCode)) return -2;
 
   int i = 0;
   NodePtr nptr = _root;
@@ -160,12 +148,11 @@ const string HuffmanTree::decode(const string &huffCode) {
     else
       nptr = nptr->rChild;
     if (nptr != nullptr && nptr->leaf && nptr->code == huffCode) {
-      if (nptr->value == 0x0000)
-        return "EOB";
-      return std::to_string(nptr->value);
+      if (nptr->value == 0x0000) return EOB;
+      return nptr->value;
     }
     i++;
   } while (nptr != nullptr && i < (int)huffCode.size());
 
-  return "";
+  return -2;
 }

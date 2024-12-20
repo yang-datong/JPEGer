@@ -43,24 +43,30 @@ void MCU::startDCT_threads_avx() {
 }
 
 void MCU::idctComponent(int imageComponent) {
-  float sum = 0.0, Cu = 0.0, Cv = 0.0;
-  const float sqrt2_inv = 1.0 / sqrt(2.0);
-
+  float sum = 0.0;
   for (int j = 0; j < COMPONENT_SIZE; ++j) {
     for (int i = 0; i < COMPONENT_SIZE; ++i) {
       sum = 0.0;
       for (int u = 0; u < COMPONENT_SIZE; ++u) {
-        for (int v = 0; v < COMPONENT_SIZE; ++v) {
-          Cu = u == 0 ? sqrt2_inv : 1.0;
-          Cv = v == 0 ? sqrt2_inv : 1.0;
-
-          sum += Cu * Cv * _matrix[imageComponent][u][v] *
-                 cos((2 * i + 1) * u * M_PI / 16.0) *
-                 cos((2 * j + 1) * v * M_PI / 16.0);
-        }
+        const float Cu = u == 0 ? C_1_div_sqrt2 : 1.0;
+        sum += C_1_div_sqrt2 * Cu * _matrix[imageComponent][u][0] *
+               cosTable[i][u] * cosTable[j][0];
+        sum += Cu * _matrix[imageComponent][u][1] * cosTable[i][u] *
+               cosTable[j][1];
+        sum += Cu * _matrix[imageComponent][u][2] * cosTable[i][u] *
+               cosTable[j][2];
+        sum += Cu * _matrix[imageComponent][u][3] * cosTable[i][u] *
+               cosTable[j][3];
+        sum += Cu * _matrix[imageComponent][u][4] * cosTable[i][u] *
+               cosTable[j][4];
+        sum += Cu * _matrix[imageComponent][u][5] * cosTable[i][u] *
+               cosTable[j][5];
+        sum += Cu * _matrix[imageComponent][u][6] * cosTable[i][u] *
+               cosTable[j][6];
+        sum += Cu * _matrix[imageComponent][u][7] * cosTable[i][u] *
+               cosTable[j][7];
       }
-
-      _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+      _idctCoeffs[imageComponent][i][j] = round(0.25 * sum);
     }
   }
 }

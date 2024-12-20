@@ -8,8 +8,8 @@ project(project_name)
 
 # C++ version used, added compilation parameters
 set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g3 -O0 -ggdb -march=native")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -march=native -ftree-vectorize")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g3 -O0 -ggdb -march=native")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -march=native -ftree-vectorize")
 
 # Specify header file directory
 include_directories(include)

@@ -6,8 +6,8 @@
 
 //#define SSE
 //#define AVX
-//#define Threads
-#define Threads_AVX
+#define Threads
+//#define Threads_AVX
 
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
@@ -62,8 +62,9 @@ void MCU::startDecode() {
   if (Image::sOutputFileType != FileFormat::YUV) Image::YUVToRGB(_Umatrix);
 }
 
+[[deprecated]]
 void MCU::fillACRLE(int imageComponent) {
-  //   AC ,RLE编码
+  // AC ,RLE编码
   // std::cout << "AC:";
   int zeroCount = 0;
   for (int indexAC = 1; indexAC < MCU_UNIT_SIZE; indexAC++) {
@@ -108,8 +109,8 @@ void MCU::fillACRLE2(int imageComponent) {
       zeroCount++;
       indexAC++;
       if (zeroCount == 16) {
-        _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
-        _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
+        _rle[imageComponent].push_back(0xf);
+        _rle[imageComponent].push_back(0x0);
         zeroCount = 0;
       }
     }
@@ -118,9 +119,9 @@ void MCU::fillACRLE2(int imageComponent) {
     zeroCount = 0;
   }
   if (lastNotZeroCount != MCU_UNIT_SIZE - 1) {
-    _rle[imageComponent].push_back(0x0); // Major byte: 0 zeros
-    _rle[imageComponent].push_back(0x0); // Minor byte: EOB
-    zeroCount = 0;                       // 重置0值的计数器
+    _rle[imageComponent].push_back(0x0);
+    _rle[imageComponent].push_back(0x0);
+    zeroCount = 0;
   }
 }
 
@@ -217,6 +218,8 @@ void MCU::startDCT() {
   }
 }
 
+#if 0
+// 最开始的实现（最慢）
 void MCU::startIDCT() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     float sum = 0.0, Cu = 0.0, Cv = 0.0;
@@ -237,6 +240,45 @@ void MCU::startIDCT() {
         }
 
         _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+      }
+    }
+  }
+}
+#endif
+
+/* 
+优化:
+1. 旋转因子cos函数采用预先计算，存放到静态表中的方式
+2. 手动展开 v 的循环（最内部循环）
+3. 1.0 / sqrt(2) 预先计算，作为宏定义
+*/
+
+void MCU::startIDCT() {
+  float sum = 0.0;
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
+    for (int j = 0; j < COMPONENT_SIZE; ++j) {
+      for (int i = 0; i < COMPONENT_SIZE; ++i) {
+        sum = 0.0;
+        for (int u = 0; u < COMPONENT_SIZE; ++u) {
+          const float Cu = u == 0 ? C_1_div_sqrt2 : 1.0;
+          sum += C_1_div_sqrt2 * Cu * _matrix[imageComponent][u][0] *
+                 cosTable[i][u] * cosTable[j][0];
+          sum += Cu * _matrix[imageComponent][u][1] * cosTable[i][u] *
+                 cosTable[j][1];
+          sum += Cu * _matrix[imageComponent][u][2] * cosTable[i][u] *
+                 cosTable[j][2];
+          sum += Cu * _matrix[imageComponent][u][3] * cosTable[i][u] *
+                 cosTable[j][3];
+          sum += Cu * _matrix[imageComponent][u][4] * cosTable[i][u] *
+                 cosTable[j][4];
+          sum += Cu * _matrix[imageComponent][u][5] * cosTable[i][u] *
+                 cosTable[j][5];
+          sum += Cu * _matrix[imageComponent][u][6] * cosTable[i][u] *
+                 cosTable[j][6];
+          sum += Cu * _matrix[imageComponent][u][7] * cosTable[i][u] *
+                 cosTable[j][7];
+        }
+        _idctCoeffs[imageComponent][i][j] = round(0.25 * sum);
       }
     }
   }

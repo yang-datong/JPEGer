@@ -85,7 +85,6 @@ int Decoder::decodeScanData() {
   /* 正式进入解码层 */
 
   if (_MCU.size() != 0) _MCU.clear();
-
   int MCUCount = (imgWidth * imgHeight) / (MCU_UNIT_SIZE);
 
   int index = 0;
@@ -99,37 +98,22 @@ int Decoder::decodeScanData() {
       /* Y单独Huffman解码表，UV共享一张Huffman解码表 */
       bool HuffTableID = imageComponent == 0 ? HT_Y : HT_CbCr;
 
-      // 设置超时时间为 5 秒
-      const chrono::milliseconds timeout(5000);
-      // 开始计时
-      auto start = chrono::steady_clock::now();
-
       /* 1.解码直流系数（DC）：对于每个颜色分量（Y,U,V），直流系数表示一个8x8宏块（或MCU）的平均值*/
       while (true) {
         bitsScanned += scanData[index];
         index++;
-        // 检查是否超时
-        auto elapsed = chrono::duration_cast<chrono::milliseconds>(
-            chrono::steady_clock::now() - start);
-        if (elapsed > timeout) {
-          std::cerr << "\033[31mWrong JPEG file\033[0m" << std::endl;
-          return -1;
-        }
         /* 先解码最外层的Huffman编码（按照对应的Huffman类型解码） */
-        string DC_len_VLICoded =
+        int DC_len_VLICoded =
             huffmanTree[HT_DC][HuffTableID].decode(bitsScanned);
-        if (checkSpace(DC_len_VLICoded)) {
+        if (DC_len_VLICoded != -2) {
           uint8_t zeroCount = 0;
           int16_t coeffDC = 0;
-          /* TODO YangJing 这里判断EOB是不是有问题?这里会有EOB? <24-12-16 14:53:15> */
-
-          /* TODO YangJing 这里的算法写法感觉有问题,后面要全部改写,且string模式太慢了 <24-12-16 14:54:45> */
-          if (DC_len_VLICoded != "EOB") {
-            // printDCCoefficient(HuffTableID, value, bitsScanned);
+          if (DC_len_VLICoded != EOB) {
+            //printDCCoefficient(HuffTableID, value, bitsScanned);
             /* 获取DC系数中 零的游程 */
-            zeroCount = uint8_t(stoi(DC_len_VLICoded)) >> 4;
+            zeroCount = DC_len_VLICoded >> 4;
             /* 得到VLI的长度 */
-            uint8_t lengthVLI = stoi(DC_len_VLICoded) & 0xf;
+            int lengthVLI = DC_len_VLICoded & 0xf;
             /* 再解码VLI编码拿到DC系数 */
             coeffDC = decodeVLI(scanData.substr(index, lengthVLI));
             index += lengthVLI;
@@ -149,14 +133,14 @@ int Decoder::decodeScanData() {
       while (ACCodesCount < MCU_UNIT_SIZE) {
         bitsScanned += scanData[index];
         index++;
-        string value = huffmanTree[HT_AC][HuffTableID].decode(bitsScanned);
-        if (checkSpace(value)) {
+        int value = huffmanTree[HT_AC][HuffTableID].decode(bitsScanned);
+        if (value != -2) {
           uint8_t zeroCount = 0;
           int16_t coeffAC = 0;
-          if (value != "EOB") {
+          if (value != EOB) {
             /* 获取AC系数中 零的游程 */
-            zeroCount = uint8_t(stoi(value)) >> 4;
-            uint8_t lengthVLI = uint8_t(stoi(value)) & 0xf;
+            zeroCount = value >> 4;
+            int lengthVLI = value & 0xf;
             /* 再解码VLI编码拿到AC系数 */
             coeffAC = decodeVLI(scanData.substr(index, lengthVLI));
             // printACCoefficient(HuffTableID, value, bitsScanned,
@@ -171,7 +155,7 @@ int Decoder::decodeScanData() {
           /* DC系数 */
           rle[imageComponent].push_back(coeffAC);
 
-          if (value == "EOB") break;
+          if (value == EOB) break;
         }
       }
 
