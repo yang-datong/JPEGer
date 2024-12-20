@@ -31,11 +31,21 @@ class MCU {
   void encodeACandDC();
   void decodeACandDC();
 
+  void startDCT_sse();
+  void startDCT_avx();
+  void startDCT_threads();
+  void startDCT_threads_avx();
   void startDCT();
   void dctComponent(int imageComponent);
+  void dctComponent_avx(int imageComponent);
 
+  void startIDCT_sse();
+  void startIDCT_avx();
+  void startIDCT_threads();
+  void startIDCT_threads_avx();
   void startIDCT();
   void idctComponent(int imageComponent);
+  void idctComponent_avx(int imageComponent);
 
   void levelShift();
   void performLevelShift();
