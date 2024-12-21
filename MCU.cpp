@@ -6,7 +6,7 @@
 
 //#define SSE
 //#define AVX
-#define Threads
+//#define Threads
 //#define Threads_AVX
 
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
@@ -251,6 +251,10 @@ void MCU::startIDCT() {
 1. 旋转因子cos函数采用预先计算，存放到静态表中的方式
 2. 手动展开 v 的循环（最内部循环）
 3. 1.0 / sqrt(2) 预先计算，作为宏定义
+4. 对于_matrix[imageComponent][u]的索引预先提取
+5. 对于数组索引预先提取：cosTable[i][u]
+6. 预先计算乘积:Cu * cosTable[i][u] 
+7. 对于sum+=乘法，提取公因式（已放弃，精度会很差）
 */
 
 void MCU::startIDCT() {
@@ -261,22 +265,18 @@ void MCU::startIDCT() {
         sum = 0.0;
         for (int u = 0; u < COMPONENT_SIZE; ++u) {
           const float Cu = u == 0 ? C_1_div_sqrt2 : 1.0;
-          sum += C_1_div_sqrt2 * Cu * _matrix[imageComponent][u][0] *
-                 cosTable[i][u] * cosTable[j][0];
-          sum += Cu * _matrix[imageComponent][u][1] * cosTable[i][u] *
-                 cosTable[j][1];
-          sum += Cu * _matrix[imageComponent][u][2] * cosTable[i][u] *
-                 cosTable[j][2];
-          sum += Cu * _matrix[imageComponent][u][3] * cosTable[i][u] *
-                 cosTable[j][3];
-          sum += Cu * _matrix[imageComponent][u][4] * cosTable[i][u] *
-                 cosTable[j][4];
-          sum += Cu * _matrix[imageComponent][u][5] * cosTable[i][u] *
-                 cosTable[j][5];
-          sum += Cu * _matrix[imageComponent][u][6] * cosTable[i][u] *
-                 cosTable[j][6];
-          sum += Cu * _matrix[imageComponent][u][7] * cosTable[i][u] *
-                 cosTable[j][7];
+          auto &matrix_u = _matrix[imageComponent][u];
+          const float cos_t = cosTable[i][u];
+          const float cu_cos_i_u = Cu * cos_t;
+
+          sum += C_1_div_sqrt2 * cu_cos_i_u * matrix_u[0] * cosTable[j][0];
+          sum += cu_cos_i_u * matrix_u[1] * cosTable[j][1];
+          sum += cu_cos_i_u * matrix_u[2] * cosTable[j][2];
+          sum += cu_cos_i_u * matrix_u[3] * cosTable[j][3];
+          sum += cu_cos_i_u * matrix_u[4] * cosTable[j][4];
+          sum += cu_cos_i_u * matrix_u[5] * cosTable[j][5];
+          sum += cu_cos_i_u * matrix_u[6] * cosTable[j][6];
+          sum += cu_cos_i_u * matrix_u[7] * cosTable[j][7];
         }
         _idctCoeffs[imageComponent][i][j] = round(0.25 * sum);
       }
