@@ -48,7 +48,6 @@ class MCU {
   void idctComponent_avx(int imageComponent);
 
   void levelShift();
-  void performLevelShift();
 
   void fillACRLE(int imageComponent);
   void fillACRLE2(int imageComponent);

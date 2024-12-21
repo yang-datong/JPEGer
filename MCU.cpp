@@ -57,7 +57,6 @@ void MCU::startDecode() {
   startIDCT();
 #endif
   // printIDCTCoeffs();
-  performLevelShift();
   // printUmatrix();
   if (Image::sOutputFileType != FileFormat::YUV) Image::YUVToRGB(_Umatrix);
 }
@@ -278,7 +277,8 @@ void MCU::startIDCT() {
           sum += cu_cos_i_u * matrix_u[6] * cosTable[j][6];
           sum += cu_cos_i_u * matrix_u[7] * cosTable[j][7];
         }
-        _idctCoeffs[imageComponent][i][j] = round(0.25 * sum);
+        /* 反中心化（反级别移位）*/
+        _Umatrix[imageComponent][i][j] = round(0.25 * sum + 128);
       }
     }
   }
@@ -290,17 +290,6 @@ void MCU::levelShift() {
     for (int y = 0; y < COMPONENT_SIZE; ++y)
       for (int x = 0; x < COMPONENT_SIZE; ++x)
         _dctCoeffs[imageComponent][y][x] = _Umatrix[imageComponent][y][x] - 128;
-}
-
-/* 反中心化（反级别移位）*/
-void MCU::performLevelShift() {
-  for (int imageComponent = 0; imageComponent < 3; ++imageComponent)
-    for (int y = 0; y < COMPONENT_SIZE; ++y)
-      for (int x = 0; x < COMPONENT_SIZE; ++x)
-        _Umatrix[imageComponent][y][x] =
-            roundl(_idctCoeffs[imageComponent][y][x]) + 128;
-  // 1. 使用 roundl 函数对IDCT变换后的系数进行四舍五入到最近的整数。
-  // 2. 向每个四舍五入后的系数加上128，以执行反中心化处理。
 }
 
 void MCU::printUmatrix() {
