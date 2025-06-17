@@ -6,7 +6,7 @@ JPEG-JFIF解码器，具有编、解码功能，按照JPEG-JFIF标准编写且�
 ## 问题
 
 1. 遇到非8整数的宽高图片会有问题
-2. 原生编、解码速度过慢（不考虑加速操作）
+2. 原生编、解码速度过慢（原生算法问题，后续有需求再调整）
 3. 未经过批量测试，部分图片可能无法正常编、接码
 
 
@@ -40,7 +40,6 @@ Executed in   14.47 secs    fish           external
 $ md5sum output.yuv                                                         
 224b56dc489e18d6e58f8ec1f2513a28  output.yuv
 ```
->在MCU.cpp中添加#define SSE 然后重新编译，即可执行SSE优化函数.
 
 2. 解码大小为1.4M的JPG图片，分辨率为3200x2000（AVX）：
 
@@ -55,7 +54,6 @@ $ md5sum output.yuv
 6817b350317285861969dcb57d2fc46a  output.yuv
 ```
 
->在MCU.cpp中添加#define AVX 然后重新编译，即可执行AVX优化函数.
 
 ### 多线程
 
@@ -71,7 +69,6 @@ Executed in   23.48 secs    fish           external
 $ md5sum output.yuv 
 6a8baba370d2befa329d89a0910e7b1f  output.yuv
 ```
->在MCU.cpp中添加#define Threads 然后重新编译，即可执行3线程优化函数.
 
 
 ### 多线程+AVX加速
@@ -87,7 +84,6 @@ $ md5sum output.yuv
 6817b350317285861969dcb57d2fc46a  output.yuv
 ```
 
-> 在MCU.cpp中添加#define Threads_AVX 然后重新编译，即可执行3线程优化函数.
 
 
 
@@ -188,3 +184,4 @@ Executed in    6.78 secs    fish           external
 - [x] 添加simd加速解码
 - [ ] 添加循环解码支持（不打算支持了）
 - [x] 添加多线程支持
+- [x] 添加自适应初始化对应架构下SIMD函数 
