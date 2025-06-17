@@ -31,6 +31,7 @@ void MCU::startDCT_threads() {
     if (t.joinable()) t.join();
 }
 
+#ifdef AVX
 void MCU::startDCT_threads_avx() {
   vector<thread> threads;
   // 先为每个图像分量创建线程
@@ -41,6 +42,7 @@ void MCU::startDCT_threads_avx() {
   for (thread &t : threads)
     if (t.joinable()) t.join();
 }
+#endif
 
 void MCU::idctComponent(int imageComponent) {
   float sum = 0.0, Cu = 0.0, Cv = 0.0;
@@ -76,6 +78,7 @@ void MCU::startIDCT_threads() {
     if (t.joinable()) t.join();
 }
 
+#ifdef AVX
 void MCU::startIDCT_threads_avx() {
   vector<thread> threads;
   // 先为每个图像分量创建线程
@@ -86,3 +89,4 @@ void MCU::startIDCT_threads_avx() {
   for (thread &t : threads)
     if (t.joinable()) t.join();
 }
+#endif

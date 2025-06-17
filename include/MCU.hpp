@@ -1,8 +1,23 @@
 #ifndef MCU_HPP_MJKLNXG9
 #define MCU_HPP_MJKLNXG9
 
-#include "Common.hpp"
 #include "Type.hpp"
+#include <mutex>
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
+#include <immintrin.h>
+#elif defined(__aarch64__) || defined(__arm__)
+#include <arm_neon.h>
+#endif
+
+#if (defined(__GNUC__) || defined(__clang__)) &&                               \
+    (defined(__x86_64__) || defined(__i386__))
+#define TARGET_AVX2 __attribute__((target("avx2")))
+#define TARGET_SSE41 __attribute__((target("sse4.1")))
+#else
+#define TARGET_AVX2
+#define TARGET_SSE41
+#endif
 
 class MCU {
  private:
@@ -31,22 +46,57 @@ class MCU {
   void encodeACandDC();
   void decodeACandDC();
 
-  void startDCT_sse();
-  void startDCT_avx();
-  void startDCT_threads();
-  void startDCT_threads_avx();
+ private:
+  //接口（函数指针）
   void startDCT();
-  void dctComponent(int imageComponent);
-  void dctComponent_avx(int imageComponent);
-
-  void startIDCT_sse();
-  void startIDCT_avx();
-  void startIDCT_threads();
-  void startIDCT_threads_avx();
   void startIDCT();
-  void idctComponent(int imageComponent);
-  void idctComponent_avx(int imageComponent);
 
+  //默认c实现(低效率)
+  void startDCT_c();
+  void startIDCT_c();
+
+  //Threads
+  void startIDCT_threads();
+  void startDCT_threads();
+  void dctComponent(int imageComponent);
+  void idctComponent(int imageComponent);
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
+  //SSE
+  void startDCT_sse41();
+  void startIDCT_sse41();
+
+  //AVX
+  void startDCT_avx2();
+  void startIDCT_avx2();
+  void startDCT_threads_avx();
+  void startIDCT_threads_avx();
+  void dctComponent_avx(int imageComponent);
+  void idctComponent_avx(int imageComponent);
+#endif
+
+#if defined(__aarch64__) || defined(__arm__)
+  void startDCT_neon();
+  void startIDCT_neon();
+#endif
+
+ private:
+  using start_dct_ptr_t = void (MCU::*)();
+  using start_idct_ptr_t = void (MCU::*)();
+
+  struct SimdDispatchTable {
+    start_dct_ptr_t start_dct;
+    start_idct_ptr_t start_idct;
+  };
+
+  static SimdDispatchTable s_dispatch_table;
+  // 初始化标志 TODO 初始化的方式不好，可能需要重新调整架构 <25-06-17 13:54:10, YangJing>
+  static std::once_flag s_init_flag;
+
+  static void initialize_dispatcher();
+
+ private:
   void levelShift();
   void performLevelShift();
 

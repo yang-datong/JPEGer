@@ -1,43 +1,73 @@
 #include "MCU.hpp"
 #include "Common.hpp"
 #include "Image.hpp"
-#include "Type.hpp"
-#include <immintrin.h>
-
-//#define SSE
-//#define AVX
-//#define Threads
-#define Threads_AVX
+#include "cpu_features.hpp"
 
 int16_t MCU::_DCDiff[3] = {0, 0, 0};
 int MCU::_MCUCount = 0;
 
+MCU::SimdDispatchTable MCU::s_dispatch_table;
+std::once_flag MCU::s_init_flag;
+
 MCU::MCU(RLE rle, const vector<QuantizationTable> &qTables)
     : _rle(rle), _qtTables(qTables) {
+  std::call_once(s_init_flag, &MCU::initialize_dispatcher);
   _MCUCount++;
 }
 
 /* 提供进来编码的宏块应该是原始状态的，不应该包含负数像素值 */
 MCU::MCU(UCompMatrices &matrix, const vector<QuantizationTable> &qTables)
     : _Umatrix(matrix), _qtTables(qTables) {
+  std::call_once(s_init_flag, &MCU::initialize_dispatcher);
   _MCUCount++;
+}
+
+void MCU::initialize_dispatcher() {
+  // 检查最高可支持的SIMD指令
+  CpuFeatures features = detect_cpu_features();
+
+  // 默认为C版本
+  s_dispatch_table.start_dct = &MCU::startDCT_c;
+  s_dispatch_table.start_idct = &MCU::startIDCT_c;
+
+  // 对于x86架构
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
+  std::cout << "Platform: x86/x64" << std::endl;
+  if (features.avx2) {
+    std::cout << "AVX2 supported. Using AVX2 functions." << std::endl;
+    s_dispatch_table.start_dct = &MCU::startDCT_avx2;
+    s_dispatch_table.start_idct = &MCU::startIDCT_avx2;
+  } else if (features.sse4_1) {
+    std::cout << "SSE4.1 supported. Using SSE4.1 functions." << std::endl;
+    s_dispatch_table.start_dct = &MCU::startDCT_sse41;
+    s_dispatch_table.start_idct = &MCU::startIDCT_sse41;
+  } else {
+    std::cout << "No special SIMD support detected. Using C++ functions."
+              << std::endl;
+  }
+
+  // 对于Arm架构
+#elif defined(__aarch64__) || defined(__arm__)
+  std::cout << "Platform: ARM" << std::endl;
+  if (features.neon) {
+    std::cout << "NEON supported. Using NEON functions." << std::endl;
+    s_dispatch_table.start_dct = &MCU::startDCT_neon;
+  } else {
+    std::cout << "NEON not supported. Using C++ functions." << std::endl;
+  }
+
+  //  TODO YangJing 其他架构，MIPS <25-06-17 12:24:14> //
+#else
+  std::cout << "Platform: Unknown. Using C++ functions." << std::endl;
+#endif
 }
 
 void MCU::startEncode() {
   // printUmatrix();
   levelShift();
-// printDCTCoeffs();
-#if defined SSE
-  startDCT_sse();
-#elif defined AVX
-  startDCT_avx();
-#elif defined Threads
-  startDCT_threads();
-#elif defined Threads_AVX
-  startDCT_threads_avx();
-#else
+  // printDCTCoeffs();
   startDCT();
-#endif
   // printMatrix();
   encodeACandDC();
 }
@@ -45,17 +75,7 @@ void MCU::startEncode() {
 void MCU::startDecode() {
   decodeACandDC();
   // printMatrix();
-#if defined SSE
-  startIDCT_sse();
-#elif defined AVX
-  startIDCT_avx();
-#elif defined Threads
-  startIDCT_threads();
-#elif defined Threads_AVX
-  startIDCT_threads_avx();
-#else
   startIDCT();
-#endif
   // printIDCTCoeffs();
   performLevelShift();
   // printUmatrix();
@@ -71,7 +91,7 @@ void MCU::fillACRLE(int imageComponent) {
     //  std::cout << AC << ",";
     if (AC == 0) {
       zeroCount++;
-      if (zeroCount == 16) { // 如果已经数了15个零，遇到第16个零
+      if (zeroCount == 16) {                 // 如果已经数了15个零，遇到第16个零
         _rle[imageComponent].push_back(0xf); // Major byte: 15 zeros
         _rle[imageComponent].push_back(0x0); // Minor byte: 0 value
         zeroCount = 0;
@@ -194,7 +214,10 @@ void MCU::decodeACandDC() {
   }
 }
 
-void MCU::startDCT() {
+void MCU::startDCT() { (this->*s_dispatch_table.start_dct)(); }
+void MCU::startIDCT() { (this->*s_dispatch_table.start_idct)(); }
+
+void MCU::startDCT_c() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0 / sqrt(2.0);
     float sum = 0.0, Cu = 0.0, Cv = 0.0;
@@ -217,7 +240,7 @@ void MCU::startDCT() {
   }
 }
 
-void MCU::startIDCT() {
+void MCU::startIDCT_c() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     float sum = 0.0, Cu = 0.0, Cv = 0.0;
     const float sqrt2_inv = 1.0 / sqrt(2.0);

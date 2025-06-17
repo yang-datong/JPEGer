@@ -1,6 +1,7 @@
 #include "MCU.hpp"
-#include "immintrin.h"
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
 void MCU::dctComponent_avx(int imageComponent) {
   const float sqrt2_inv = 1.0 / sqrt(2.0);
   float cos_values_u[8][8], cos_values_v[8][8];
@@ -115,7 +116,7 @@ void MCU::idctComponent_avx(int imageComponent) {
   }
 }
 
-void MCU::startDCT_avx() {
+void MCU::startDCT_avx2() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0 / sqrt(2.0);
     float cos_values_u[8][8], cos_values_v[8][8];
@@ -171,7 +172,7 @@ void MCU::startDCT_avx() {
   }
 }
 
-void MCU::startIDCT_avx() {
+void MCU::startIDCT_avx2() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0 / sqrt(2.0);
     float cos_values_u[8][8], cos_values_v[8][8];
@@ -233,3 +234,4 @@ void MCU::startIDCT_avx() {
     }
   }
 }
+#endif

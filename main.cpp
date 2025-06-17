@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     use(argv[0]);
     return -1;
   }
+
   string inSuffixStr = getFileType(inputFileName);
   string outSuffixStr = getFileType(outputFileName);
   if (inSuffixStr == "jpg" || inSuffixStr == "jpeg") {

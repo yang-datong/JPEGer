@@ -8,8 +8,17 @@ project(project_name)
 
 # C++ version used, added compilation parameters
 set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g3 -O0 -ggdb -march=native")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -march=native -ftree-vectorize")
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|x86|i386|i686|amd64")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g3 -O0 -ggdb -mavx2")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -mavx2 -ftree-vectorize")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm|armv7l|armv6l|armhf")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g3 -O0 -ggdb")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -ftree-vectorize")
+else()
+	message(WARNING "Unknown or unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
 
 # Specify header file directory
 include_directories(include)

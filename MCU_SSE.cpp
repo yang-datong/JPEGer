@@ -1,7 +1,9 @@
 #include "MCU.hpp"
-#include <xmmintrin.h>
 
-void MCU::startDCT_sse() {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
+TARGET_SSE41
+void MCU::startDCT_sse41() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0 / sqrt(2.0);
     float cos_values_u[8][8], cos_values_v[8][8];
@@ -50,8 +52,7 @@ void MCU::startDCT_sse() {
   }
 }
 
-
-void MCU::startIDCT_sse() {
+void MCU::startIDCT_sse41() {
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0 / sqrt(2.0);
     float cos_values_u[8][8], cos_values_v[8][8];
@@ -107,3 +108,4 @@ void MCU::startIDCT_sse() {
     }
   }
 }
+#endif
