@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
-#include <vector>
 
 int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);
@@ -20,7 +19,7 @@ int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   for (int i = 0; i < (int)sizeof(header.jfifVersion); i++)
     header.jfifVersion[i] = bs.readByte();
 
-  std::cout << "\tJFIFVersion:" << (int)header.jfifVersion[0] << "."
+  std::cout << "\tJFIFVersion:" << (int)header.jfifVersion[0] << ".0"
             << (int)header.jfifVersion[1] << endl;
 
   header.unit = bs.readByte();

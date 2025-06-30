@@ -9,6 +9,7 @@ program="build/a.out"
 #程序执行需要的参数
 args="-i output.yuv -s 512x512 -o demo.jpg"
 args="-i demo.jpg -o output.yuv"
+args="-i test/1080p_yuvj444p_base.jpg -o output.yuv"
 
 #源代码路径(Glibc路径,Option)
 #ldd_version=$(ldd --version | grep ldd | awk '{print $5}')

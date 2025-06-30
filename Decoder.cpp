@@ -35,9 +35,23 @@ int Decoder::startFindMarker() {
       case JFIF::SOI:
         std::cout << "Start OF Image" << std::endl;
         break;
+
+        // JFIF 标准元数据（如分辨率、缩略图）
       case JFIF::APP0:
-        std::cout << "Decode Application-specific" << std::endl;
+        std::cout << "Decode Application-specific 0" << std::endl;
         _app0->parse(i + 2, _buf, _bufSize);
+        break;
+
+      // EXIF 元数据（相机参数、GPS 等）
+      case JFIF::APP1:
+        std::cout << "Decode Application-specific 1" << std::endl;
+        //_app1->parse(i + 2, _buf, _bufSize);
+        break;
+
+        //ICC 配置、MPF 多图像等
+      case JFIF::APP2:
+        std::cout << "Decode Application-specific 2" << std::endl;
+        //_app2->parse(i + 2, _buf, _bufSize);
         break;
       case JFIF::COM:
         std::cout << "Comment" << std::endl;

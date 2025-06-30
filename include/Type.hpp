@@ -39,6 +39,8 @@ using namespace std;
 enum JFIF {
   SOI = 0xD8,
   APP0 = 0xE0,
+  APP1 = 0xE1,
+  APP2 = 0xE2,
   DQT = 0xDB,
   SOF0 = 0xC0,
   SOF2 = 0xC2,

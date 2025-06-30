@@ -53,8 +53,7 @@ void MCU::initialize_dispatcher() {
   if (features.neon) {
     std::cout << "NEON supported. Using NEON functions." << std::endl;
     s_dispatch_table.start_dct = &MCU::startDCT_neon;
-    //  TODO YangJing 有问题：可以正常解码，但是后续无法编码 <25-06-30 15:30:17> //
-    //s_dispatch_table.start_dct = &MCU::startIDCT_neon;
+    s_dispatch_table.start_dct = &MCU::startIDCT_neon;
   } else {
     std::cout << "NEON not supported. Using C++ functions." << std::endl;
   }
@@ -207,6 +206,11 @@ void MCU::decodeACandDC() {
 
     /*反量化：根据Y分量，Cb,Cr分量使用不同的量化表*/
     int qtIndex = imageComponent == 0 ? HT_Y : HT_CbCr;
+
+    if (qtIndex >= (int)_qtTables.size()) {
+      //FIXME: 有些情况下好像只有一个量化表，所以这种情况下，色度表就用亮度表？
+      qtIndex = _qtTables.size() - 1;
+    }
     for (int i = 0; i < MCU_UNIT_SIZE; i++)
       _zzOrder[i] *= _qtTables[qtIndex][i];
 

@@ -20,27 +20,42 @@ int mark::SOF0::parse(int index, uint8_t *buf, int bufSize) {
   std::cout << "\timageComponentCount:" << (int)header.imageComponentCount
             << std::endl;
 
-  bool isNonSampled = true;
+  bool isNonSampled = false;
   std::cout << "\timageComponent{" << std::endl;
 
   ImageComponent *imageComponent =
       new ImageComponent[header.imageComponentCount];
+  uint8_t sampFactorH[8] = {0}, sampFactorV[8] = {0};
+  uint8_t sampFactorHMax = 1, sampFactorVMax = 1;
   for (int i = 0; i < header.imageComponentCount; i++) {
     imageComponent[i].componentIdentifier = bs.readByte();
     imageComponent[i].sampFactor = bs.readByte();
-    uint8_t sampFactorH = imageComponent[i].sampFactor >> 4;
-    uint8_t sampFactorV = imageComponent[i].sampFactor & 0b1111;
+    sampFactorH[i] = imageComponent[i].sampFactor >> 4;
+    sampFactorV[i] = imageComponent[i].sampFactor & 0b1111;
+    if (sampFactorH[i] > sampFactorHMax) sampFactorHMax = sampFactorH[i];
+    if (sampFactorV[i] > sampFactorVMax) sampFactorVMax = sampFactorV[i];
     imageComponent[i].destinationSelector = bs.readByte();
     std::cout << "\t\tcomponentIdentifier:"
               << (int)imageComponent[i].componentIdentifier;
-    std::cout << ",Horizontal sampFactor:" << (int)sampFactorH
-              << ",Vertical sampFactor:" << (int)sampFactorV;
+    std::cout << ",Horizontal sampFactor:" << (int)sampFactorH[i]
+              << ",Vertical sampFactor:" << (int)sampFactorV[i];
     std::cout << ",destinationSelector:"
               << (int)imageComponent[i].destinationSelector << std::endl;
     if ((imageComponent[i].sampFactor >> 4) != 1 ||
         (imageComponent[i].sampFactor & 0xf) != 1)
       isNonSampled = false;
   }
+  // NOTE: From ffmpeg/libavcode/mjpegdec.c/500 line
+  int pix_fmt_id = ((unsigned)sampFactorH[0] << 28) | (sampFactorV[0] << 24) |
+                   (sampFactorH[1] << 20) | (sampFactorV[1] << 16) |
+                   (sampFactorH[2] << 12) | (sampFactorV[2] << 8) |
+                   (sampFactorH[3] << 4) | sampFactorV[3];
+  if (!(pix_fmt_id & 0xD0D0D0D0)) pix_fmt_id -= (pix_fmt_id & 0xF0F0F0F0) >> 1;
+  if (!(pix_fmt_id & 0x0D0D0D0D)) pix_fmt_id -= (pix_fmt_id & 0x0F0F0F0F) >> 1;
+  if (pix_fmt_id == 0x11111100) {
+    isNonSampled = true;
+  }
+
   std::cout << "\t}" << std::endl;
   if (isNonSampled == false) {
     cout << "Chroma subsampling not yet supported!" << std::endl;
