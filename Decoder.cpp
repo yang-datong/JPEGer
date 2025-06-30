@@ -49,7 +49,7 @@ int Decoder::startFindMarker() {
         break;
       case JFIF::SOF0:
         std::cout << "Start Of Frame 0" << std::endl;
-        _sof0->parse(i + 2, _buf, _bufSize);
+        if (_sof0->parse(i + 2, _buf, _bufSize)) return -1;
         break;
       case JFIF::DHT:
         std::cout << "Define Huffman Table(s)" << std::endl;

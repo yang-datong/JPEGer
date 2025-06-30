@@ -53,6 +53,8 @@ void MCU::initialize_dispatcher() {
   if (features.neon) {
     std::cout << "NEON supported. Using NEON functions." << std::endl;
     s_dispatch_table.start_dct = &MCU::startDCT_neon;
+    //  TODO YangJing 有问题：可以正常解码，但是后续无法编码 <25-06-30 15:30:17> //
+    //s_dispatch_table.start_dct = &MCU::startIDCT_neon;
   } else {
     std::cout << "NEON not supported. Using C++ functions." << std::endl;
   }
