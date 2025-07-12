@@ -53,7 +53,13 @@ void MCU::startDCT_neon() {
   }
 }
 
+extern "C" __attribute__((noinline)) void startIDCT_asm(MCU *mcu_instance);
+
 void MCU::startIDCT_neon() {
+#ifdef ASM_IDCT
+  startIDCT_asm(this);
+  return;
+#endif
   for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     const float sqrt2_inv = 1.0f / sqrtf(2.0f);
     float cos_values_u[8][8], cos_values_v[8][8];
