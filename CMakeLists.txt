@@ -24,9 +24,8 @@ endif()
 include_directories(include)
 
 # Find all source files in the current directory
-aux_source_directory(. SOURCES)
+#aux_source_directory(. SOURCES)
+file(GLOB DIR_SOURCES "*.cpp" "aarch64/*.cpp" "x86/*.cpp")
 
 # Compile all source code together and link it to an executable file 'a.out'
-add_executable(a.out ${SOURCES})
-
-
+add_executable(a.out ${DIR_SOURCES})

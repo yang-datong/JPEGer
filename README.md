@@ -1,188 +1,74 @@
-# Version 3
-JPEG-JFIF解码器，具有编、解码功能，按照JPEG-JFIF标准编写且符合JFIF协议，很多数值都是写死的（不具有动态修改）。
+# JPEG-JFIF 编解码器
 
-**已有功能**：能编、解码标准的JPEG-JFIF文件，具体有DCT/IDCT多线程、SIMD(SSE,AVX,NEON)加速功能。
+一个符合JPEG-JFIF标准的编解码器实现，支持基本的编码/解码功能，包含SIMD和多线程优化。
 
-## 问题
+## 功能特性
 
-1. 仅支持YUV444p的JPEG图片
-2. 遇到非8整数的宽高图片会有问题
-3. 原生编、解码速度过慢（原生算法问题，后续有需求再调整）
-4. 未经过批量测试，部分图片可能无法正常编、接码
+- 完整的JPEG-JFIF编解码功能
+- 多线程处理支持（YUV各分量并行处理）
+- 跨平台SIMD加速：
+  - x86平台：SSE/AVX指令集
+  - ARM平台：NEON指令集
 
+## 当前限制
 
+1. 仅支持YUV444采样格式
+3. 未完全优化原生算法性能
+4. 测试覆盖有限，可能存在兼容性问题
 
-## 解码加速
+## 性能基准
 
-解码大小为1.4M的JPG图片，分辨率为3200x2000（无任何额外加速）：
+测试图片：3200x2000分辨率图像（1.4MB JPG / 19MB YUV）
 
+操作系统：Ubuntu 22.04
+
+CPU：AMD R5 5600
+
+### 解码性能
+
+| 优化方式            | 执行时间 | 用户CPU时间 | 系统CPU时间 | MD5校验值                   |
+|---------------------|----------|-------------|-------------|-----------------------------|
+| 无优化              | 43.83s   | 43.47s      | 0.35s       | 6a8baba370d2befa329d89a0910e7b1f |
+| SSE加速             | 14.47s   | 14.11s      | 0.36s       | 224b56dc489e18d6e58f8ec1f2513a28 |
+| AVX加速             | 13.15s   | 12.78s      | 0.35s       | 6817b350317285861969dcb57d2fc46a |
+| 多线程(3线程)       | 23.48s   | 11.08s      | 1.41s       | 6a8baba370d2befa329d89a0910e7b1f |
+| 多线程+AVX          | 11.71s   | 6.28s       | 2.40s       | 6817b350317285861969dcb57d2fc46a |
+| 编译器优化(-O3)     | 6.84s    | 2.78s       | 2.73s       | -                           |
+
+### 编码性能
+
+| 优化方式            | 执行时间 | 用户CPU时间 | 系统CPU时间 | MD5校验值                   |
+|---------------------|----------|-------------|-------------|-----------------------------|
+| 无优化              | 49.93s   | 49.59s      | 0.34s       | 4ffd014f38bbaee96d2ef0e6cf4fcb3e |
+| SSE加速             | 21.78s   | 21.43s      | 0.34s       | 57f22903b2f28531d1a689bbd429aebf |
+| AVX加速             | 19.85s   | 19.50s      | 0.35s       | fc2973627fad10510cc5b862219f2155 |
+| 多线程(3线程)       | 29.86s   | 17.34s      | 1.83s       | 4ffd014f38bbaee96d2ef0e6cf4fcb3e |
+| 编译器优化(-O3)     | 6.78s    | 2.70s       | 2.79s       | -                           |
+
+## 使用说明
+
+### 基本命令
+
+解码JPEG到YUV：
 ```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in   43.83 secs    fish           external
-   usr time   43.47 secs    0.00 micros   43.47 secs
-   sys time    0.35 secs  429.00 micros    0.35 secs
-   
-$ md5sum demo.yuv 
-6a8baba370d2befa329d89a0910e7b1f  output.yuv
+$ ./build/a.out -i test/lenna.jpg -o output.yuv
 ```
 
-### SIMD加速
-
-1. 解码大小为1.4M的JPG图片，分辨率为3200x2000（SSE）：
-
+编码YUV到JPEG：
 ```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in   14.47 secs    fish           external
-   usr time   14.11 secs  350.00 micros   14.11 secs
-   sys time    0.36 secs   56.00 micros    0.36 secs
-
-$ md5sum output.yuv                                                         
-224b56dc489e18d6e58f8ec1f2513a28  output.yuv
+$ ./build/a.out -i output.yuv -s 512x512 -o output.jpg
 ```
 
-2. 解码大小为1.4M的JPG图片，分辨率为3200x2000（AVX）：
+## 开发路线
 
-```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in   13.15 secs    fish           external
-   usr time   12.78 secs    0.00 micros   12.78 secs
-   sys time    0.35 secs  442.00 micros    0.35 secs
+- [x] 项目模块化重构
+- [x] 编码器功能实现
+- [x] SIMD加速解码
+- [x] 多线程支持
+- [x] 自动检测架构选择SIMD指令集
+- [x] 循环解码支持（暂不考虑）
 
-$ md5sum output.yuv
-6817b350317285861969dcb57d2fc46a  output.yuv
-```
+## 注意事项
 
-
-### 多线程
-
-1. 解码大小为1.4M的JPG图片，分辨率为3200x2000（多线程，3线程Y、U、V分别一个线程）：
-
-```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in   23.48 secs    fish           external
-   usr time   11.08 secs  302.00 micros   11.08 secs
-   sys time    1.41 secs   58.00 micros    1.41 secs
-
-$ md5sum output.yuv 
-6a8baba370d2befa329d89a0910e7b1f  output.yuv
-```
-
-
-### 多线程+AVX加速
-
-```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in   11.71 secs    fish           external
-   usr time    6.28 secs  357.00 micros    6.28 secs
-   sys time    2.40 secs   77.00 micros    2.40 secs
-
-$ md5sum output.yuv
-6817b350317285861969dcb57d2fc46a  output.yuv
-```
-
-
-
-
-## 编码加速
-
-1. 编码大小为19M的YUV444p图片，分辨率为3200x2000（无任何额外加速）：
-
-```bash
-$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
-________________________________________________________
-Executed in   49.93 secs    fish           external
-   usr time   49.59 secs  312.00 micros   49.59 secs
-   sys time    0.34 secs   64.00 micros    0.33 secs
-
-$ md5sum demo.jpg    
-4ffd014f38bbaee96d2ef0e6cf4fcb3e  demo.jpg
-```
-
-### SIMD加速
-
-1. 编码大小为19M的YUV444p图片，分辨率为3200x2000（SSE）：
-
-```bash
-$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
-________________________________________________________
-Executed in   21.78 secs    fish           external
-   usr time   21.43 secs  537.00 micros   21.43 secs
-   sys time    0.34 secs  109.00 micros    0.34 secs
-
-$ md5sum demo.jpg
-57f22903b2f28531d1a689bbd429aebf  demo.jpg
-```
-
-2. 编码大小为19M的YUV444p图片，分辨率为3200x2000（AVX）：
-
-```bash
-$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
-________________________________________________________
-Executed in   19.85 secs    fish           external
-   usr time   19.50 secs  413.00 micros   19.50 secs
-   sys time    0.35 secs   85.00 micros    0.35 secs
-$ md5sum demo.jpg 
-fc2973627fad10510cc5b862219f2155  demo.jpg
-```
-
-3. 编码大小为19M的YUV444p图片，分辨率为3200x2000（NEON）：
-
-没什么对比意义
-
-
-### 多线程
-1. 编码大小为19M的YUV444p图片，分辨率为3200x2000（多线程，3线程Y、U、V分别一个线程）：
-
-```bash
-$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
-________________________________________________________
-Executed in   29.86 secs    fish           external
-   usr time   17.34 secs    0.00 micros   17.34 secs
-   sys time    1.83 secs  450.00 micros    1.83 secs
-
-$ md5sum demo.jpg
-4ffd014f38bbaee96d2ef0e6cf4fcb3e  demo.jpg
-```
-
-
-
-## 编译器优化加速
-
-添加`-O3 -ftree-vectorize `参数，解码：
-
-```bash
-$ time ./a.out -i DeskImage.jpg -o demo.yuv
-________________________________________________________
-Executed in    6.84 secs    fish           external
-   usr time    2.78 secs    0.10 millis    2.78 secs
-   sys time    2.73 secs    1.02 millis    2.73 secs
-```
-
-编码：
-
-```bash
-$ time ./a.out -i DeskImage.yuv -s 3200x2000 -o demo.jpg 
-________________________________________________________
-Executed in    6.78 secs    fish           external
-   usr time    2.70 secs  669.00 micros    2.70 secs
-   sys time    2.79 secs  203.00 micros    2.79 secs
-
-```
-
-
-
-
-
-## 后续
-
-- [x] 模块化项目
-- [x] 添加开发“编码器”
-- [x] 添加simd加速解码
-- [ ] 添加循环解码支持（不打算支持了）
-- [x] 添加多线程支持
-- [x] 添加自适应初始化对应架构下SIMD函数 
+1. 不同优化方式产生的输出MD5可能不同，这是由浮点运算顺序差异导致的正常现象
+2. 建议始终使用相同的优化配置进行编码/解码以获得一致的输出

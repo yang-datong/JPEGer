@@ -53,7 +53,7 @@ void MCU::initialize_dispatcher() {
   if (features.neon) {
     std::cout << "NEON supported. Using NEON functions." << std::endl;
     s_dispatch_table.start_dct = &MCU::startDCT_neon;
-    s_dispatch_table.start_dct = &MCU::startIDCT_neon;
+    s_dispatch_table.start_idct = &MCU::startIDCT_neon;
   } else {
     std::cout << "NEON not supported. Using C++ functions." << std::endl;
   }
