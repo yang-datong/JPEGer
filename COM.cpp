@@ -1,7 +1,6 @@
 #include "COM.hpp"
 #include <cstdint>
 #include <cstring>
-#include <netinet/in.h>
 
 int mark::COM::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);

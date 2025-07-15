@@ -15,7 +15,6 @@
 1. 仅支持YUV444采样格式
 2. 未完全优化原生算法性能
 3. 测试覆盖有限，可能存在兼容性问题
-4. 未在Windows平台上进行编译测试（MacOS、Linux可正常编译、执行）
 
 ## 性能基准
 
@@ -53,7 +52,8 @@ CPU：AMD R5 5600 / Apple Silicon M3
 ### 编译步骤
 
 ```bash
-$ cmake -B build .
+$ cmake -B build . #对于Linux、MacOS平台
+#$ cmake -G "MinGW Makefiles" -B build .  #对于Windows平台
 $ make -j4 -C build
 ```
 

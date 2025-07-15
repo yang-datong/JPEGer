@@ -1,7 +1,6 @@
 #include "APP0.hpp"
 #include <cstdint>
 #include <cstring>
-#include <netinet/in.h>
 
 int mark::APP0::parse(int index, uint8_t *buf, int bufSize) {
   ByteStream bs(buf + index, bufSize - index);

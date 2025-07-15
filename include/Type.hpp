@@ -13,12 +13,18 @@
 #include <iterator>
 #include <math.h>
 #include <memory>
-#include <netinet/in.h>
 #include <sstream>
 #include <string.h>
 #include <string>
 #include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netinet/in.h>
+#endif
 
 #if defined(SSE)
 #include <immintrin.h>
