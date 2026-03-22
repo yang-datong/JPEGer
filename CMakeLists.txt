@@ -34,7 +34,7 @@ include_directories(include)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|x86|i386|i686|AMD64")
 	file(GLOB DIR_SOURCES "*.cpp" "aarch64/*.cpp" "x86/*.cpp" "x86/*.S")
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm|armv7l|armv6l|armhf")
-	file(GLOB DIR_SOURCES "*.cpp" "aarch64/*.cpp" "aarch64/*.S")
+	file(GLOB DIR_SOURCES "*.cpp" "aarch64/*.cpp")
 endif()
 
 # Compile all source code together and link it to an executable file 'a.out'

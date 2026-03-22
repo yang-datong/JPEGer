@@ -16,7 +16,7 @@ void MCU::startDCT_neon() {
 
     for (int v = 0; v < 8; ++v) {
       for (int u = 0; u < 8; ++u) {
-        float32x4_t sum_vec = vdupq_n_f32(0.0f);
+        float sum = 0.0f;
 
         for (int i = 0; i < 8; ++i) {
           float32x4_t cos_u_vec = vdupq_n_f32(cos_values_u[u][i]);
@@ -29,25 +29,18 @@ void MCU::startDCT_neon() {
             float32x4_t temp = vmulq_f32(cos_u_vec, cos_v_vec);
             temp = vmulq_f32(temp, coeff_vec);
 
-            sum_vec = vaddq_f32(sum_vec, temp);
+            float terms[4];
+            vst1q_f32(terms, temp);
+            sum += terms[0];
+            sum += terms[1];
+            sum += terms[2];
+            sum += terms[3];
           }
         }
 
-        // NOTE: 水平相加 (将向量中的4个float加在一起)，这是比SSE存储到内存再相加更高效的方式
-#if defined(__aarch64__)
-        // AArch64提供了一个直接的指令
-        float final_sum = vaddvq_f32(sum_vec);
-#else
-        // ARMv7 (32-bit) 的兼容方法
-        float32x2_t temp_sum =
-            vpadd_f32(vget_low_f32(sum_vec), vget_high_f32(sum_vec));
-        float final_sum =
-            vget_lane_f32(temp_sum, 0) + vget_lane_f32(temp_sum, 1);
-#endif
-
         float Cu = (u == 0) ? sqrt2_inv : 1.0f;
         float Cv = (v == 0) ? sqrt2_inv : 1.0f;
-        _matrix[imageComponent][u][v] = roundf((Cu * Cv) / 4.0f * final_sum);
+        _matrix[imageComponent][u][v] = roundf((Cu * Cv) / 4.0f * sum);
       }
     }
   }
@@ -74,7 +67,7 @@ void MCU::startIDCT_neon() {
 
     for (int j = 0; j < 8; ++j) {
       for (int i = 0; i < 8; ++i) {
-        float32x4_t sum_vec = vdupq_n_f32(0.0f);
+        float sum = 0.0f;
 
         for (int u = 0; u < 8; ++u) {
           float Cu = (u == 0) ? sqrt2_inv : 1.0f;
@@ -100,20 +93,15 @@ void MCU::startIDCT_neon() {
             temp = vmulq_f32(temp, cos_v_vec);
             temp = vmulq_f32(temp, coeff_f32_vec);
 
-            sum_vec = vaddq_f32(sum_vec, temp);
+            float terms[4];
+            vst1q_f32(terms, temp);
+            sum += terms[0];
+            sum += terms[1];
+            sum += terms[2];
+            sum += terms[3];
           }
         }
-
-        // 水平相加
-#if defined(__aarch64__)
-        float final_sum = vaddvq_f32(sum_vec);
-#else
-        float32x2_t temp_sum =
-            vpadd_f32(vget_low_f32(sum_vec), vget_high_f32(sum_vec));
-        float final_sum =
-            vget_lane_f32(temp_sum, 0) + vget_lane_f32(temp_sum, 1);
-#endif
-        _idctCoeffs[imageComponent][i][j] = roundf(1.0f / 4.0f * final_sum);
+        _idctCoeffs[imageComponent][i][j] = roundf(1.0f / 4.0f * sum);
       }
     }
   }

@@ -224,48 +224,64 @@ void MCU::startDCT() { (this->*s_dispatch_table.start_dct)(); }
 void MCU::startIDCT() { (this->*s_dispatch_table.start_idct)(); }
 
 void MCU::startDCT_c() {
-  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    const float sqrt2_inv = 1.0 / sqrt(2.0);
-    float sum = 0.0, Cu = 0.0, Cv = 0.0;
+  const float sqrt2_inv = 1.0f / sqrtf(2.0f);
+  float cos_values_u[8][8], cos_values_v[8][8];
 
+  for (int u = 0; u < 8; ++u)
+    for (int i = 0; i < 8; ++i)
+      cos_values_u[u][i] = cosf((2 * i + 1) * u * M_PI / 16.0f);
+
+  for (int v = 0; v < 8; ++v)
+    for (int j = 0; j < 8; ++j)
+      cos_values_v[v][j] = cosf((2 * j + 1) * v * M_PI / 16.0f);
+
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int v = 0; v < COMPONENT_SIZE; ++v) {
       for (int u = 0; u < COMPONENT_SIZE; ++u) {
-        sum = 0;
+        float sum = 0.0f;
         for (int i = 0; i < COMPONENT_SIZE; ++i) {
           for (int j = 0; j < COMPONENT_SIZE; ++j) {
-            sum += _dctCoeffs[imageComponent][i][j] *
-                   cos((2 * i + 1) * u * M_PI / 16) *
-                   cos((2 * j + 1) * v * M_PI / 16);
+            float term = cos_values_u[u][i] * cos_values_v[v][j];
+            term *= _dctCoeffs[imageComponent][i][j];
+            sum += term;
           }
         }
-        Cu = u == 0 ? sqrt2_inv : 1.0;
-        Cv = v == 0 ? sqrt2_inv : 1.0;
-        _matrix[imageComponent][u][v] = round((Cu * Cv) / 4.0 * sum);
+        float Cu = u == 0 ? sqrt2_inv : 1.0f;
+        float Cv = v == 0 ? sqrt2_inv : 1.0f;
+        _matrix[imageComponent][u][v] = roundf((Cu * Cv) / 4.0f * sum);
       }
     }
   }
 }
 
 void MCU::startIDCT_c() {
-  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
-    float sum = 0.0, Cu = 0.0, Cv = 0.0;
-    const float sqrt2_inv = 1.0 / sqrt(2.0);
+  const float sqrt2_inv = 1.0f / sqrtf(2.0f);
+  float cos_values_u[8][8], cos_values_v[8][8];
 
+  for (int u = 0; u < 8; ++u)
+    for (int i = 0; i < 8; ++i)
+      cos_values_u[u][i] = cosf((2 * i + 1) * u * M_PI / 16.0f);
+
+  for (int v = 0; v < 8; ++v)
+    for (int j = 0; j < 8; ++j)
+      cos_values_v[v][j] = cosf((2 * j + 1) * v * M_PI / 16.0f);
+
+  for (int imageComponent = 0; imageComponent < 3; ++imageComponent) {
     for (int j = 0; j < COMPONENT_SIZE; ++j) {
       for (int i = 0; i < COMPONENT_SIZE; ++i) {
-        sum = 0.0;
+        float sum = 0.0f;
         for (int u = 0; u < COMPONENT_SIZE; ++u) {
+          float Cu = u == 0 ? sqrt2_inv : 1.0f;
           for (int v = 0; v < COMPONENT_SIZE; ++v) {
-            Cu = u == 0 ? sqrt2_inv : 1.0;
-            Cv = v == 0 ? sqrt2_inv : 1.0;
-
-            sum += Cu * Cv * _matrix[imageComponent][u][v] *
-                   cos((2 * i + 1) * u * M_PI / 16.0) *
-                   cos((2 * j + 1) * v * M_PI / 16.0);
+            float Cv = v == 0 ? sqrt2_inv : 1.0f;
+            float term = Cu * cos_values_u[u][i];
+            term *= Cv;
+            term *= cos_values_v[v][j];
+            term *= static_cast<float>(_matrix[imageComponent][u][v]);
+            sum += term;
           }
         }
-
-        _idctCoeffs[imageComponent][i][j] = round(1.0 / 4.0 * sum);
+        _idctCoeffs[imageComponent][i][j] = roundf(1.0f / 4.0f * sum);
       }
     }
   }
